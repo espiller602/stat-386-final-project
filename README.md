@@ -22,11 +22,21 @@ nfl_playoff_predictor/
 
 ## Usage
 
-```python
-from nfl_playoff_predictor.wrangling import build_advanced_dataset
+### Data Wrangling
 
-# Build dataset from raw data files
+```python
+from nfl_playoff_predictor.wrangling import (
+    build_advanced_dataset,
+    clean_column_names,
+    process_and_save_dataset
+)
+
+# Option 1: Build and clean dataset in one step
+df = process_and_save_dataset("data sources", "clean_playoff_passing.csv")
+
+# Option 2: Build dataset, then clean columns separately
 df = build_advanced_dataset("data sources", start_year=2018, end_year=2024)
+clean_df = clean_column_names(df)
 ```
 
 ## Authors
