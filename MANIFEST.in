@@ -1,0 +1,5 @@
+include README.md
+include requirements.txt
+recursive-include nfl_playoff_predictor *.py
+recursive-include "data sources" *.xls *.xlsx
+
