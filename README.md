@@ -39,6 +39,19 @@ df = build_advanced_dataset("data sources", start_year=2018, end_year=2024)
 clean_df = clean_column_names(df)
 ```
 
+### Streamlit App
+
+Run the interactive Streamlit application:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The app provides:
+- **Home**: Project information and navigation
+- **Data Explorer**: Interactive data exploration with filters, statistics, and visualizations
+- **Predictions**: Interface for making predictions (model integration pending)
+
 ## Authors
 
 Eli Spiller, Zion Tippetts
