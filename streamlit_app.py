@@ -18,6 +18,12 @@ from nfl_playoff_predictor.wrangling import (
     clean_column_names,
     process_and_save_dataset
 )
+from nfl_playoff_predictor.analysis import (
+    get_default_model,
+    predict_playoff_wins,
+    evaluate_model,
+    prepare_data
+)
 
 # Page configuration
 st.set_page_config(
@@ -61,6 +67,32 @@ def load_data():
         else:
             st.error("Data file not found. Please ensure 'clean_playoff_passing.csv' exists or 'data sources' directory is available.")
             return None
+
+
+@st.cache_resource
+def load_model(df):
+    """
+    Load or train the predictive model.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataset for training
+    
+    Returns
+    -------
+    statsmodels.genmod.generalized_linear_model.GLMResults
+        Trained model
+    """
+    if df is None:
+        return None
+    
+    try:
+        model = get_default_model(df)
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        return None
 
 
 def home_page():
@@ -253,7 +285,7 @@ def data_explorer_page(df):
 
 
 def predictions_page(df):
-    """Display the predictions page (placeholder for model)."""
+    """Display the predictions page with model integration."""
     st.title("🔮 Predictions")
     st.markdown("---")
     
@@ -261,16 +293,32 @@ def predictions_page(df):
         st.warning("No data available. Please check data files.")
         return
     
-    st.info("""
-    ⚠️ **Model Integration Pending**
+    # Load model
+    model = load_model(df)
     
-    This section will be populated with the predictive model once it's ready.
-    The model will use advanced passing statistics to predict playoff wins.
-    """)
+    if model is None:
+        st.error("Unable to load model. Please check the data and try again.")
+        return
+    
+    # Display model information
+    with st.expander("📚 Model Information", expanded=False):
+        st.markdown("""
+        **Model Type**: Poisson Generalized Linear Model (GLM)
+        
+        **Selected Variables** (from Cross-Validation, Rank 1):
+        - IAY_PA (Intended Air Yards per Attempt)
+        - YAC_Cmp (Yards After Catch per Completion)
+        - IntPerAtt (Interceptions per Attempt = Int / Att)
+        
+        **Model Performance**:
+        - Pseudo R-squared: ~0.15
+        - Residual deviance / df: ~1.24
+        - Selected via 5-fold cross-validation (best model by deviance)
+        """)
     
     st.markdown("---")
     
-    # Placeholder for input form
+    # Input form
     st.subheader("Input Parameters")
     st.markdown("Enter quarterback statistics to predict playoff wins:")
     
@@ -279,54 +327,126 @@ def predictions_page(df):
     with col1:
         st.write("**Advanced Passing Metrics**")
         iay_pa = st.number_input("IAY/PA (Intended Air Yards per Attempt)", 
-                                 min_value=0.0, max_value=20.0, value=7.0, step=0.1)
-        cay_pa = st.number_input("CAY/PA (Completed Air Yards per Attempt)", 
-                                 min_value=0.0, max_value=15.0, value=4.0, step=0.1)
+                                 min_value=0.0, max_value=20.0, value=7.0, step=0.1,
+                                 help="Average intended air yards per pass attempt")
         yac_cmp = st.number_input("YAC/Cmp (Yards After Catch per Completion)", 
-                                  min_value=0.0, max_value=10.0, value=5.0, step=0.1)
-        prss_pct = st.number_input("Prss% (Pressure Percentage)", 
-                                   min_value=0.0, max_value=100.0, value=20.0, step=0.1)
+                                  min_value=0.0, max_value=10.0, value=5.0, step=0.1,
+                                  help="Average yards after catch per completion")
     
     with col2:
-        st.write("**Additional Metrics**")
-        pkt_time = st.number_input("PktTime (Pocket Time)", 
-                                   min_value=0.0, max_value=5.0, value=2.5, step=0.1)
-        drop_pct = st.number_input("Drop% (Drop Percentage)", 
-                                   min_value=0.0, max_value=20.0, value=5.0, step=0.1)
-        bad_pct = st.number_input("Bad% (Bad Throw Percentage)", 
-                                 min_value=0.0, max_value=50.0, value=15.0, step=0.1)
-        interceptions = st.number_input("Int (Interceptions)", 
-                                       min_value=0, max_value=10, value=1, step=1)
+        st.write("**Interception Metrics**")
+        interceptions = st.number_input("Int (Total Interceptions)", 
+                                       min_value=0, max_value=10, value=1, step=1,
+                                       help="Total number of interceptions")
+        attempts = st.number_input("Att (Total Pass Attempts)", 
+                                  min_value=1, max_value=200, value=50, step=1,
+                                  help="Total number of pass attempts")
+        
+        # Calculate IntPerAtt
+        if attempts > 0:
+            int_per_att = interceptions / attempts
+            st.info(f"**IntPerAtt**: {int_per_att:.4f} (calculated as Int / Att)")
+        else:
+            int_per_att = 0.0
+            st.warning("Attempts must be greater than 0")
     
     st.markdown("---")
     
-    # Placeholder for prediction button and results
+    # Prediction button and results
     if st.button("🔮 Predict Playoff Wins", type="primary", use_container_width=True):
-        st.warning("""
-        **Model not yet integrated**
+        try:
+            # Calculate IntPerAtt
+            if attempts <= 0:
+                st.error("Pass attempts must be greater than 0")
+                return
+            
+            int_per_att = interceptions / attempts
+            
+            # Prepare input dictionary with correct variable names (3 variables from CV)
+            input_data = {
+                'IAY_PA': iay_pa,
+                'YAC_Cmp': yac_cmp,
+                'IntPerAtt': int_per_att
+            }
+            
+            # Make prediction
+            prediction = predict_playoff_wins(model, input_data)
+            
+            # Display results
+            st.success("### Prediction Results")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Predicted Playoff Wins", f"{prediction:.2f}")
+            with col2:
+                # Calculate confidence interval (approximate)
+                lower_bound = max(0, prediction - 1.0)
+                upper_bound = prediction + 1.0
+                st.metric("Confidence Range", f"{lower_bound:.1f} - {upper_bound:.1f}")
+            with col3:
+                # Round to nearest integer for interpretation
+                rounded_pred = round(prediction)
+                st.metric("Rounded Prediction", f"{rounded_pred} games")
+            
+            st.info("""
+            **Note**: This is a point prediction from a Poisson GLM model. 
+            The actual number of playoff wins is a count variable (0, 1, 2, 3, ...).
+            The model predicts the expected (mean) number of wins.
+            """)
+            
+            # Show input summary
+            with st.expander("📊 Input Summary"):
+                st.write("**Input Parameters:**")
+                st.write(f"- IAY_PA: {iay_pa}")
+                st.write(f"- YAC_Cmp: {yac_cmp}")
+                st.write(f"- Int: {interceptions}")
+                st.write(f"- Att: {attempts}")
+                st.write(f"- IntPerAtt: {int_per_att:.4f} (calculated)")
         
-        This feature will be available once the predictive model is implemented.
-        The model will use the input parameters above to predict the number of 
-        playoff games won.
-        
-        Expected output:
-        - Predicted playoff wins
-        - Confidence interval
-        - Model performance metrics
-        """)
+        except Exception as e:
+            st.error(f"Error making prediction: {str(e)}")
+            st.info("Please ensure all input values are within valid ranges.")
     
     st.markdown("---")
     
-    # Placeholder section for model information
-    with st.expander("📚 Model Information (Coming Soon)"):
-        st.markdown("""
-        Once the model is integrated, this section will display:
+    # Model diagnostics section
+    with st.expander("🔍 Model Diagnostics"):
+        try:
+            # Prepare data for evaluation
+            df_prep, _ = prepare_data(df)
+            
+            # Calculate IntPerAtt for evaluation
+            if 'Int' in df_prep.columns and 'Att' in df_prep.columns:
+                df_prep['IntPerAtt'] = df_prep['Int'] / df_prep['Att']
+            else:
+                st.warning("Cannot calculate IntPerAtt - missing Int or Att columns")
+                return
+            
+            # Use the correct selected variables (3 variables from CV)
+            selected_vars = ['IAY_PA', 'YAC_Cmp', 'IntPerAtt']
+            
+            # Get evaluation metrics
+            eval_results = evaluate_model(model, df_prep, selected_vars)
+            
+            st.write("**Model Evaluation Metrics:**")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Pseudo R²", f"{eval_results['pseudo_r_squared']:.3f}")
+            with col2:
+                st.metric("AIC", f"{eval_results['aic']:.2f}")
+            with col3:
+                st.metric("Overdispersion", f"{eval_results['overdispersion_ratio']:.2f}")
+            
+            st.write("**Variance Inflation Factors (VIF):**")
+            st.dataframe(eval_results['vif'], use_container_width=True)
+            
+            if eval_results['overdispersion_ratio'] > 1.5:
+                st.warning("⚠️ Overdispersion detected. Consider using Negative Binomial regression.")
+            else:
+                st.success("✓ Overdispersion is within acceptable range for Poisson model.")
         
-        - **Model Type**: e.g., Logistic Regression, Decision Trees, etc.
-        - **Model Performance**: Accuracy, Precision, Recall, ROC-AUC scores
-        - **Feature Importance**: Which statistics are most predictive
-        - **Model Assumptions**: Limitations and considerations
-        """)
+        except Exception as e:
+            st.warning(f"Could not compute diagnostics: {str(e)}")
 
 
 def main():

@@ -8,3 +8,10 @@ __pycache__/
 *.so
 .Python
 
+# Data files (these are large and can be regenerated)
+*.csv
+*.xls
+*.xlsx
+data sources/
+clean_playoff_passing.csv
+

@@ -39,6 +39,29 @@ df = build_advanced_dataset("data sources", start_year=2018, end_year=2024)
 clean_df = clean_column_names(df)
 ```
 
+### Analysis
+
+```python
+from nfl_playoff_predictor.analysis import (
+    get_default_model,
+    predict_playoff_wins,
+    train_poisson_model,
+    evaluate_model
+)
+
+# Get the default trained model
+model = get_default_model(df)
+
+# Make a prediction
+prediction = predict_playoff_wins(model, {
+    'IAY_PA': 7.0,
+    'YAC_Cmp': 5.0,
+    'Int': 1,
+    'DropPct': 5.0,
+    'BadPct': 15.0
+})
+```
+
 ### Streamlit App
 
 Run the interactive Streamlit application:
@@ -50,7 +73,7 @@ streamlit run streamlit_app.py
 The app provides:
 - **Home**: Project information and navigation
 - **Data Explorer**: Interactive data exploration with filters, statistics, and visualizations
-- **Predictions**: Interface for making predictions (model integration pending)
+- **Predictions**: Make predictions using the trained Poisson GLM model
 
 ## Authors
 
