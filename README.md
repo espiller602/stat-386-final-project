@@ -53,6 +53,27 @@ df = build_advanced_dataset("data sources", start_year=2018, end_year=2024)
 clean_df = clean_column_names(df)
 ```
 
+### Data Cleaning Script
+
+You can also use the standalone command-line script for data cleaning:
+
+```bash
+# Use defaults (data sources/, clean_playoff_passing.csv, 2018-2024)
+python clean_data.py
+
+# Specify custom directory and output file
+python clean_data.py "data sources" "my_output.csv"
+
+# Specify all parameters
+python clean_data.py "data sources" "output.csv" 2019 2023
+```
+
+The script will:
+- Process data from the specified directory
+- Clean and merge advanced and standard passing statistics
+- Save the cleaned dataset to a CSV file
+- Display progress and summary information
+
 ### Analysis
 
 ```python
