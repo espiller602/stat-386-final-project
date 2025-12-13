@@ -118,7 +118,7 @@ def home_page():
     ### Project Information
     - **Course**: STAT 386
     - **Team**: Eli Spiller, Zion Tippetts
-    - **Date**: November 2025
+    - **Date**: Fall 2025
     """)
     
     st.markdown("---")
@@ -146,7 +146,11 @@ def data_explorer_page(df):
     st.sidebar.header("Filters")
     
     # Season filter
-    seasons = sorted(df['Season'].unique()) if 'Season' in df.columns else []
+    if 'Season' in df.columns:
+        # Convert to numeric, filter out NaN, then sort
+        seasons = sorted([int(s) for s in df['Season'].unique() if pd.notna(s)])
+    else:
+        seasons = []
     selected_seasons = st.sidebar.multiselect(
         "Select Seasons",
         options=seasons,
@@ -154,7 +158,12 @@ def data_explorer_page(df):
     )
     
     # Team filter
-    teams = sorted(df['Team'].unique()) if 'Team' in df.columns else []
+    if 'Team' in df.columns:
+        # Convert Team column to string (handling NaN) for consistent filtering
+        # Get unique teams, convert to string, filter out NaN, then sort
+        teams = sorted([str(t) for t in df['Team'].unique() if pd.notna(t)])
+    else:
+        teams = []
     selected_teams = st.sidebar.multiselect(
         "Select Teams",
         options=teams,
@@ -166,7 +175,8 @@ def data_explorer_page(df):
     if selected_seasons:
         filtered_df = filtered_df[filtered_df['Season'].isin(selected_seasons)]
     if selected_teams:
-        filtered_df = filtered_df[filtered_df['Team'].isin(selected_teams)]
+        # Convert Team column to string for consistent type matching
+        filtered_df = filtered_df[filtered_df['Team'].astype(str).isin(selected_teams)]
     
     # Display dataset info
     col1, col2, col3, col4 = st.columns(4)

@@ -15,3 +15,8 @@ __pycache__/
 data sources/
 clean_playoff_passing.csv
 
+# Python package build files
+*.egg-info/
+dist/
+build/
+

@@ -1,0 +1,190 @@
+---
+title: "Analysis Functions"
+---
+
+## Overview
+
+The `nfl_playoff_predictor.analysis` module provides functions for training, evaluating, and using Poisson GLM models to predict NFL playoff wins.
+
+## Functions
+
+### `get_default_model()`
+
+Returns the default trained model using the best variables from cross-validation.
+
+**Parameters:**
+- `df` (pd.DataFrame): Dataframe with playoff passing statistics
+
+**Returns:**
+- `statsmodels.genmod.generalized_linear_model.GLMResults`: Fitted Poisson GLM model
+
+**Model Configuration:**
+- **Variables**: `['IAY_PA', 'YAC_Cmp', 'IntPerAtt']` (selected via 5-fold CV)
+- **Model Type**: Poisson Generalized Linear Model
+- **IntPerAtt**: Calculated as `Int / Att`
+
+**Example:**
+
+```python
+from nfl_playoff_predictor.analysis import get_default_model
+import pandas as pd
+
+df = pd.read_csv("clean_playoff_passing.csv")
+model = get_default_model(df)
+print(model.summary())
+```
+
+---
+
+### `predict_playoff_wins()`
+
+Predicts playoff wins for given predictor values.
+
+**Parameters:**
+- `model`: Fitted Poisson GLM model
+- `predictors_dict` (dict): Dictionary with predictor names and values
+  - `'IAY_PA'`: Intended Air Yards per Attempt
+  - `'YAC_Cmp'`: Yards After Catch per Completion
+  - `'IntPerAtt'`: Interceptions per Attempt
+
+**Returns:**
+- `float`: Predicted number of playoff wins
+
+**Example:**
+
+```python
+from nfl_playoff_predictor.analysis import get_default_model, predict_playoff_wins
+
+model = get_default_model(df)
+prediction = predict_playoff_wins(model, {
+    'IAY_PA': 7.0,
+    'YAC_Cmp': 5.0,
+    'IntPerAtt': 0.02
+})
+print(f"Predicted wins: {prediction:.2f}")
+```
+
+---
+
+### `train_poisson_model()`
+
+Trains a Poisson GLM model with specified predictors.
+
+**Parameters:**
+- `df` (pd.DataFrame): Prepared dataframe
+- `predictors` (list): List of predictor column names
+- `response` (str, default="playoff_games_won"): Response variable name
+
+**Returns:**
+- `statsmodels.genmod.generalized_linear_model.GLMResults`: Fitted model
+
+**Example:**
+
+```python
+from nfl_playoff_predictor.analysis import train_poisson_model
+
+model = train_poisson_model(df, ['IAY_PA', 'YAC_Cmp', 'IntPerAtt'])
+```
+
+---
+
+### `evaluate_model()`
+
+Evaluates model performance and diagnostics.
+
+**Parameters:**
+- `model`: Fitted model
+- `df` (pd.DataFrame): Dataframe for evaluation
+- `predictors` (list): List of predictor column names
+- `response` (str, default="playoff_games_won"): Response variable name
+
+**Returns:**
+- `dict`: Dictionary with evaluation metrics including:
+  - `overdispersion_ratio`: Check for overdispersion
+  - `vif`: Variance Inflation Factors
+  - `pseudo_r_squared`: Pseudo R-squared value
+  - `aic`, `bic`: Information criteria
+
+**Example:**
+
+```python
+from nfl_playoff_predictor.analysis import get_default_model, evaluate_model
+
+model = get_default_model(df)
+results = evaluate_model(model, df, ['IAY_PA', 'YAC_Cmp', 'IntPerAtt'])
+print(f"Pseudo R²: {results['pseudo_r_squared']:.3f}")
+print(results['vif'])
+```
+
+---
+
+### `select_variables_lasso()`
+
+Selects variables using Poisson Lasso regression.
+
+**Parameters:**
+- `df` (pd.DataFrame): Prepared dataframe
+- `predictors` (list): List of predictor column names
+- `response` (str, default="playoff_games_won"): Response variable name
+- `alpha` (float, default=0.01): Final alpha value for selection
+- `alphas` (list, optional): List of alpha values to test
+
+**Returns:**
+- `list`: Selected variable names
+
+---
+
+### `cross_validate_model()`
+
+Performs k-fold cross-validation for model selection.
+
+**Parameters:**
+- `df` (pd.DataFrame): Prepared dataframe
+- `predictors` (list): List of predictor column names to test
+- `response` (str, default="playoff_games_won"): Response variable name
+- `n_splits` (int, default=5): Number of folds
+- `random_state` (int, default=42): Random state for reproducibility
+
+**Returns:**
+- `list`: List of dictionaries with CV results, sorted by mean deviance
+
+**Example:**
+
+```python
+from nfl_playoff_predictor.analysis import cross_validate_model
+
+predictors = ['IAY_PA', 'YAC_Cmp', 'IntPerAtt', 'DropPct', 'BadPct']
+cv_results = cross_validate_model(df, predictors)
+
+# Print top 5 models
+for i, result in enumerate(cv_results[:5], 1):
+    print(f"Rank {i}: {result['predictors']}, Deviance: {result['mean_deviance']:.2f}")
+```
+
+---
+
+## Model Details
+
+### Final Model
+
+The default model uses three predictors selected via cross-validation:
+
+1. **IAY_PA** (Intended Air Yards per Attempt)
+   - Measures how far downfield the quarterback is attempting to throw
+   - Higher values indicate more aggressive downfield passing
+
+2. **YAC_Cmp** (Yards After Catch per Completion)
+   - Measures receiver production after the catch
+   - Higher values indicate better receiver play
+
+3. **IntPerAtt** (Interceptions per Attempt)
+   - Calculated as `Int / Att`
+   - Lower values indicate better ball security
+
+### Model Performance
+
+- **Pseudo R²**: ~0.15
+- **Residual Deviance / df**: ~1.24
+- **Overdispersion**: Within acceptable range for Poisson model
+- **VIF**: All values < 1.25 (no multicollinearity concerns)
+

@@ -56,9 +56,7 @@ model = get_default_model(df)
 prediction = predict_playoff_wins(model, {
     'IAY_PA': 7.0,
     'YAC_Cmp': 5.0,
-    'Int': 1,
-    'DropPct': 5.0,
-    'BadPct': 15.0
+    'IntPerAtt': 0.02  # IntPerAtt = Int / Att
 })
 ```
 
@@ -74,6 +72,18 @@ The app provides:
 - **Home**: Project information and navigation
 - **Data Explorer**: Interactive data exploration with filters, statistics, and visualizations
 - **Predictions**: Make predictions using the trained Poisson GLM model
+
+## Documentation
+
+Comprehensive documentation is available on [GitHub Pages](https://espiller602.github.io/stat-386-final-project/):
+
+- [Home](https://espiller602.github.io/stat-386-final-project/) - Package overview and quick start
+- [Data Wrangling](https://espiller602.github.io/stat-386-final-project/wrangling.html) - Data cleaning functions
+- [Analysis](https://espiller602.github.io/stat-386-final-project/analysis.html) - Modeling and prediction functions
+- [Tutorial](https://espiller602.github.io/stat-386-final-project/tutorial.html) - Step-by-step guide
+- [Final Report](https://espiller602.github.io/stat-386-final-project/report.html) - Complete project report
+
+The documentation is built using [Quarto](https://quarto.org/) and automatically deployed via GitHub Actions.
 
 ## Authors
 
