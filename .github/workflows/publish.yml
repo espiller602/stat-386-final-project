@@ -24,10 +24,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Quarto
-        uses: quarto-dev/quarto-actions@v2
-        with:
-          version: latest
+      - name: Install Quarto
+        run: |
+          wget -q https://github.com/quarto-dev/quarto/releases/download/v1.4.549/quarto-1.4.549-linux-amd64.deb
+          sudo dpkg -i quarto-1.4.549-linux-amd64.deb
+          quarto --version
 
       - name: Render Quarto
         working-directory: docs
