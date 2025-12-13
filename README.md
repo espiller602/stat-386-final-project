@@ -4,7 +4,21 @@ A Python package for predicting NFL postseason wins using advanced passing stati
 
 ## Installation
 
+### From GitHub
+
+Install directly from the GitHub repository:
+
 ```bash
+pip install git+https://github.com/espiller602/stat-386-final-project.git
+```
+
+### Local Development
+
+For local development and contributions:
+
+```bash
+git clone https://github.com/espiller602/stat-386-final-project.git
+cd stat-386-final-project
 pip install -r requirements.txt
 pip install -e .
 ```

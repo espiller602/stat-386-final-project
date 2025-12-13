@@ -11,6 +11,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
+import statsmodels.api as sm
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 
 # Import our package functions
 from nfl_playoff_predictor.wrangling import (
@@ -243,6 +247,9 @@ def data_explorer_page(df):
                 ax.set_xlabel("Playoff Games Won")
                 ax.set_ylabel("Frequency")
                 ax.set_title("Distribution of Playoff Games Won")
+                # Set x-axis ticks to integers only
+                max_games = int(filtered_df['playoff_games_won'].max())
+                ax.set_xticks(range(0, max_games + 1))
                 st.pyplot(fig)
                 plt.close()
             
@@ -277,6 +284,182 @@ def data_explorer_page(df):
                     ax.set_title("Correlation Heatmap")
                     st.pyplot(fig)
                     plt.close()
+            
+            # Model Residual Plots
+            st.write("#### Model Residual Diagnostics")
+            try:
+                # Get model for residual analysis (uses full dataset)
+                model = load_model(df)
+                if model is not None and hasattr(model, 'resid_pearson'):
+                    # Get residuals and fitted values from the model
+                    residuals = model.resid_pearson
+                    fitted = model.fittedvalues
+                    
+                    # Residuals vs Fitted
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    ax.scatter(fitted, residuals, alpha=0.7)
+                    ax.axhline(0, color='red', linestyle='--')
+                    ax.set_xlabel("Fitted values")
+                    ax.set_ylabel("Pearson residuals")
+                    ax.set_title("Residuals vs Fitted")
+                    ax.grid(True, alpha=0.3)
+                    st.pyplot(fig)
+                    plt.close()
+                    
+                    # Histogram of residuals
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    ax.hist(residuals, bins=15, density=True, alpha=0.6, edgecolor='black')
+                    ax.set_xlabel("Pearson Residuals")
+                    ax.set_ylabel("Density")
+                    ax.set_title("Histogram of Pearson Residuals")
+                    ax.grid(True, alpha=0.3)
+                    st.pyplot(fig)
+                    plt.close()
+                    
+                    # QQ Plot
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    sm.qqplot(residuals, line='45', ax=ax)
+                    ax.set_title("QQ Plot of Pearson Residuals")
+                    st.pyplot(fig)
+                    plt.close()
+                else:
+                    st.warning("Model not available or does not have residual attributes.")
+            except Exception as e:
+                st.warning(f"Could not generate residual plots: {str(e)}")
+            
+            # Clustering Analysis
+            st.write("#### Clustering Analysis")
+            
+            try:
+                # Prepare data to rename columns (IAY/PA -> IAY_PA, etc.)
+                df_prepared, _ = prepare_data(filtered_df.copy())
+                
+                # Map of feature names (both original and renamed)
+                feature_map = {
+                    'IAY_PA': ['IAY_PA', 'IAY/PA'],
+                    'YAC_Cmp': ['YAC_Cmp', 'YAC/Cmp'],
+                    'IntPerAtt': ['IntPerAtt'],
+                    'DropPct': ['DropPct', 'Drop%'],
+                    'BadPct': ['BadPct', 'Bad%']
+                }
+                
+                # Check which features are available (check both original and renamed names)
+                available_features = []
+                feature_mapping = {}  # Map to standardized names
+                
+                for std_name, possible_names in feature_map.items():
+                    found = False
+                    for name in possible_names:
+                        if name in df_prepared.columns:
+                            available_features.append(std_name)
+                            feature_mapping[std_name] = name
+                            found = True
+                            break
+                    if not found and std_name == 'IntPerAtt':
+                        # Try to calculate IntPerAtt
+                        if 'Int' in df_prepared.columns and 'Att' in df_prepared.columns:
+                            df_prepared['IntPerAtt'] = df_prepared['Int'] / df_prepared['Att']
+                            available_features.append('IntPerAtt')
+                            feature_mapping['IntPerAtt'] = 'IntPerAtt'
+                
+                if len(available_features) >= 3:
+                    # Use standardized feature names, but get actual column names from mapping
+                    actual_cols = [feature_mapping[f] for f in available_features]
+                    # Prepare data for clustering (use actual column names)
+                    clustering_data = df_prepared[actual_cols].dropna()
+                    
+                    if len(clustering_data) > 0:
+                        # Standardize
+                        scaler = StandardScaler()
+                        X_scaled = scaler.fit_transform(clustering_data)
+                        
+                        # Elbow Method
+                        st.write("##### Elbow Method for Optimal k")
+                        inertia = []
+                        K = range(1, 10)
+                        for k in K:
+                            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+                            kmeans.fit(X_scaled)
+                            inertia.append(kmeans.inertia_)
+                        
+                        fig, ax = plt.subplots(figsize=(8, 6))
+                        ax.plot(K, inertia, 'bo-')
+                        ax.set_xlabel('Number of clusters k')
+                        ax.set_ylabel('Inertia')
+                        ax.set_title('Elbow Method for k')
+                        ax.grid(True, alpha=0.3)
+                        st.pyplot(fig)
+                        plt.close()
+                        
+                        # KMeans Clustering with PCA
+                        st.write("##### KMeans Clusters (k=2 and k=4)")
+                        candidate_ks = [2, 4]
+                        
+                        # Prepare PCA
+                        pca = PCA(n_components=2)
+                        X_pca = pca.fit_transform(X_scaled)
+                        
+                        # Create side-by-side plots
+                        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+                        
+                        for i, k in enumerate(candidate_ks):
+                            # Fit KMeans
+                            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+                            clusters = kmeans.fit_predict(X_scaled)
+                            
+                            # Plot
+                            ax = axes[i]
+                            for cluster in range(k):
+                                subset = X_pca[clusters == cluster]
+                                ax.scatter(subset[:, 0], subset[:, 1], label=f'Cluster {cluster}', s=50, alpha=0.6)
+                            
+                            ax.set_title(f'KMeans Clusters (k={k})')
+                            ax.set_xlabel('PCA 1')
+                            ax.set_ylabel('PCA 2')
+                            ax.legend()
+                            ax.grid(True, alpha=0.3)
+                        
+                        plt.tight_layout()
+                        st.pyplot(fig)
+                        plt.close()
+                        
+                        # Clusters with Feature Vectors
+                        st.write("##### Clusters with Feature Vectors (k=2)")
+                        kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
+                        clusters = kmeans.fit_predict(X_scaled)
+                        
+                        # Get loadings (use standardized feature names for display)
+                        loadings = pd.DataFrame(pca.components_, columns=available_features, index=['PCA1', 'PCA2'])
+                        
+                        fig, ax = plt.subplots(figsize=(10, 8))
+                        
+                        # Plot clusters
+                        for cluster in range(2):
+                            subset = X_pca[clusters == cluster]
+                            ax.scatter(subset[:, 0], subset[:, 1], label=f'Cluster {cluster}', s=50, alpha=0.6)
+                        
+                        # Plot feature vectors
+                        for i, feature in enumerate(available_features):
+                            ax.arrow(0, 0, loadings.loc['PCA1', feature]*3, loadings.loc['PCA2', feature]*3, 
+                                    color='r', alpha=0.7, head_width=0.1)
+                            ax.text(loadings.loc['PCA1', feature]*3.2, loadings.loc['PCA2', feature]*3.2, 
+                                   feature, color='r', fontsize=9)
+                        
+                        ax.set_xlabel('PCA 1')
+                        ax.set_ylabel('PCA 2')
+                        ax.set_title('Clusters with Feature Vectors')
+                        ax.legend()
+                        ax.grid(True, alpha=0.3)
+                        st.pyplot(fig)
+                        plt.close()
+                    else:
+                        st.warning("Not enough data points for clustering after removing missing values.")
+                else:
+                    # Show helpful message about what was found
+                    found_cols = [c for c in df_prepared.columns if any(f in c for f in ['IAY', 'YAC', 'Int', 'Drop', 'Bad', 'Cmp'])]
+                    st.info(f"Clustering analysis requires at least 3 of: IAY_PA (or IAY/PA), YAC_Cmp (or YAC/Cmp), IntPerAtt, DropPct (or Drop%), BadPct (or Bad%). Found {len(available_features)}: {available_features}. Available relevant columns: {found_cols[:10]}")
+            except Exception as e:
+                st.warning(f"Could not generate clustering visualizations: {str(e)}")
         else:
             st.info("No numeric columns available for visualization.")
     

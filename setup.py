@@ -14,7 +14,7 @@ setup(
     description="A Python package for predicting NFL postseason wins using advanced passing statistics",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/stat-386-final-project",
+    url="https://github.com/espiller602/stat-386-final-project",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",

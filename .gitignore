@@ -20,3 +20,6 @@ clean_playoff_passing.csv
 dist/
 build/
 
+# Windows artifacts
+nul
+
