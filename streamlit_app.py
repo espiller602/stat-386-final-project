@@ -56,6 +56,9 @@ def load_data():
     
     if data_file.exists():
         df = pd.read_csv(data_file)
+        # Filter out "League Average" rows
+        if 'Player' in df.columns:
+            df = df[df['Player'].astype(str).str.strip().str.lower() != 'league average']
         return df
     else:
         # If file doesn't exist, try to create it
@@ -67,6 +70,9 @@ def load_data():
                 start_year=2018,
                 end_year=2024
             )
+            # Filter out "League Average" rows
+            if 'Player' in df.columns:
+                df = df[df['Player'].astype(str).str.strip().str.lower() != 'league average']
             return df
         else:
             st.error("Data file not found. Please ensure 'clean_playoff_passing.csv' exists or 'data sources' directory is available.")
