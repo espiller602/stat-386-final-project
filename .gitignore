@@ -8,3 +8,18 @@ __pycache__/
 *.so
 .Python
 
+# Data files (these are large and can be regenerated)
+*.csv
+!clean_playoff_passing.csv
+*.xls
+*.xlsx
+data sources/
+
+# Python package build files
+*.egg-info/
+dist/
+build/
+
+# Windows artifacts
+nul
+

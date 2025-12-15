@@ -1,0 +1,30 @@
+/* Custom styles for Quarto documentation */
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h1, h2, h3 {
+  color: #1a5490;
+}
+
+code {
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+pre {
+  background-color: #f8f8f8;
+  border-left: 4px solid #1a5490;
+  padding: 10px;
+}
+
+.navbar {
+  background-color: #1a5490;
+}
+
+.navbar-brand {
+  color: white !important;
+}
+

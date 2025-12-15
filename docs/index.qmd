@@ -1,0 +1,74 @@
+---
+title: "NFL Playoff Predictor"
+subtitle: "Predicting NFL Postseason Wins Using Advanced Passing Statistics"
+---
+
+## About
+
+The **NFL Playoff Predictor** is a Python package for analyzing NFL playoff passing statistics and predicting postseason wins using advanced quarterback metrics. This package provides tools for data cleaning, statistical analysis, and predictive modeling.
+
+## Quick Start
+
+### Installation
+
+```bash
+pip install -r requirements.txt
+pip install -e .
+```
+
+### Basic Usage
+
+```python
+from nfl_playoff_predictor.wrangling import process_and_save_dataset
+from nfl_playoff_predictor.analysis import get_default_model, predict_playoff_wins
+
+# Prepare the dataset
+df = process_and_save_dataset("data sources", "clean_playoff_passing.csv")
+
+# Get the trained model
+model = get_default_model(df)
+
+# Make a prediction
+prediction = predict_playoff_wins(model, {
+    'IAY_PA': 7.0,
+    'YAC_Cmp': 5.0,
+    'IntPerAtt': 0.02
+})
+print(f"Predicted playoff wins: {prediction:.2f}")
+```
+
+## Package Structure
+
+```
+nfl_playoff_predictor/
+├── wrangling/          # Data cleaning and preparation
+│   └── data_cleaning.py
+└── analysis/            # Statistical analysis and modeling
+    └── modeling.py
+```
+
+## Features
+
+- **Data Wrangling**: Clean and prepare NFL playoff passing statistics from multiple seasons
+- **Predictive Modeling**: Poisson GLM model for predicting playoff wins
+- **Interactive App**: Streamlit web application for exploration and predictions
+- **Comprehensive Documentation**: Full function documentation and tutorials
+
+## Documentation
+
+- [Data Wrangling Functions](wrangling.qmd) - Functions for cleaning and preparing data
+- [Analysis Functions](analysis.qmd) - Modeling and prediction functions
+- [Tutorial](tutorial.qmd) - Step-by-step guide to using the package
+- [Final Report](report.qmd) - Complete project report
+
+## Authors
+
+**Eli Spiller** and **Zion Tippetts**
+
+STAT 386 Final Project - Fall 2025
+
+## Links
+
+- [GitHub Repository](https://github.com/espiller602/stat-386-final-project)
+- [Streamlit App](https://your-streamlit-app-url.streamlit.app) *(to be deployed)*
+

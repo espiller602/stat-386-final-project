@@ -1,0 +1,115 @@
+---
+title: "Data Wrangling Functions"
+---
+
+## Overview
+
+The `nfl_playoff_predictor.wrangling` module provides functions for cleaning and preparing NFL playoff passing statistics from Pro-Football-Reference HTML tables.
+
+## Functions
+
+### `build_advanced_dataset()`
+
+Builds a combined dataset from NFL playoff passing statistics across multiple seasons.
+
+**Parameters:**
+- `data_dir` (str): Directory containing data files
+- `start_year` (int, default=2018): First year to include
+- `end_year` (int, default=2024): Last year to include (inclusive)
+
+**Returns:**
+- `pd.DataFrame`: Combined dataset with advanced and standard passing statistics
+
+**Example:**
+
+```python
+from nfl_playoff_predictor.wrangling import build_advanced_dataset
+
+df = build_advanced_dataset("data sources", start_year=2018, end_year=2024)
+print(df.head())
+```
+
+**What it does:**
+1. Reads advanced passing statistics from HTML files (e.g., `2018_Playoffs_Advanced.xls`)
+2. Reads standard passing statistics (e.g., `2018_Standard_Passing.xls`)
+3. Merges datasets by Player, Team, and Season
+4. Extracts playoff wins from QBrec field
+5. Returns combined dataset for all specified years
+
+---
+
+### `clean_column_names()`
+
+Cleans column names by removing duplicate suffixes and renaming columns after merging.
+
+**Parameters:**
+- `df` (pd.DataFrame): DataFrame with merged advanced and standard passing statistics
+
+**Returns:**
+- `pd.DataFrame`: DataFrame with cleaned column names
+
+**Example:**
+
+```python
+from nfl_playoff_predictor.wrangling import build_advanced_dataset, clean_column_names
+
+df = build_advanced_dataset("data sources")
+clean_df = clean_column_names(df)
+```
+
+**What it does:**
+1. Drops columns ending with `_y` (duplicates from standard passing)
+2. Removes `_x` suffix from remaining columns
+3. Renames `Yds.1` to `YdsLost` for clarity
+
+---
+
+### `process_and_save_dataset()`
+
+Complete pipeline: build dataset, clean columns, and save to CSV.
+
+**Parameters:**
+- `data_dir` (str): Directory containing data files
+- `output_file` (str, default="clean_playoff_passing.csv"): Path to output CSV file
+- `start_year` (int, default=2018): First year to include
+- `end_year` (int, default=2024): Last year to include
+
+**Returns:**
+- `pd.DataFrame`: Cleaned dataset
+
+**Example:**
+
+```python
+from nfl_playoff_predictor.wrangling import process_and_save_dataset
+
+df = process_and_save_dataset("data sources", "clean_playoff_passing.csv")
+```
+
+**What it does:**
+1. Calls `build_advanced_dataset()` to create the dataset
+2. Calls `clean_column_names()` to clean column names
+3. Saves the result to a CSV file
+4. Returns the cleaned DataFrame
+
+---
+
+## Data Requirements
+
+Your data files should be named in the following format:
+- `{year}_Playoffs_Advanced.xls` - Advanced passing statistics
+- `{year}_Standard_Passing.xls` - Standard passing statistics
+
+For example:
+- `2018_Playoffs_Advanced.xls`
+- `2018_Standard_Passing.xls`
+- `2019_Playoffs_Advanced.xls`
+- etc.
+
+## Output Columns
+
+The cleaned dataset includes:
+- Player information (Player, Team, Season)
+- Advanced passing metrics (IAY/PA, CAY/PA, YAC/Cmp, etc.)
+- Standard passing metrics (Cmp, Att, Yds, TD, Int, etc.)
+- Derived metrics (playoff_games_won)
+

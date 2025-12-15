@@ -87,6 +87,10 @@ def build_advanced_dataset(data_dir, start_year=2018, end_year=2024):
     # --- Concatenate all years ---
     adv_all = pd.concat(adv_list, ignore_index=True)
     std_all = pd.concat(std_list, ignore_index=True)
+    
+    # Filter out "League Average" rows before merging
+    adv_all = adv_all[adv_all['Player'].astype(str).str.strip().str.lower() != 'league average']
+    std_all = std_all[std_all['Player'].astype(str).str.strip().str.lower() != 'league average']
 
     # --- Merge standard onto advanced ---
     merged_df = adv_all.merge(std_all, on=['Player', 'Team', 'Season'], how='left')

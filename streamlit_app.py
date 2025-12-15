@@ -11,12 +11,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
+import statsmodels.api as sm
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 
 # Import our package functions
 from nfl_playoff_predictor.wrangling import (
     build_advanced_dataset,
     clean_column_names,
     process_and_save_dataset
+)
+from nfl_playoff_predictor.analysis import (
+    get_default_model,
+    predict_playoff_wins,
+    evaluate_model,
+    prepare_data
 )
 
 # Page configuration
@@ -46,6 +56,9 @@ def load_data():
     
     if data_file.exists():
         df = pd.read_csv(data_file)
+        # Filter out "League Average" rows
+        if 'Player' in df.columns:
+            df = df[df['Player'].astype(str).str.strip().str.lower() != 'league average']
         return df
     else:
         # If file doesn't exist, try to create it
@@ -57,10 +70,39 @@ def load_data():
                 start_year=2018,
                 end_year=2024
             )
+            # Filter out "League Average" rows
+            if 'Player' in df.columns:
+                df = df[df['Player'].astype(str).str.strip().str.lower() != 'league average']
             return df
         else:
             st.error("Data file not found. Please ensure 'clean_playoff_passing.csv' exists or 'data sources' directory is available.")
             return None
+
+
+@st.cache_resource
+def load_model(df):
+    """
+    Load or train the predictive model.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataset for training
+    
+    Returns
+    -------
+    statsmodels.genmod.generalized_linear_model.GLMResults
+        Trained model
+    """
+    if df is None:
+        return None
+    
+    try:
+        model = get_default_model(df)
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        return None
 
 
 def home_page():
@@ -86,7 +128,7 @@ def home_page():
     ### Project Information
     - **Course**: STAT 386
     - **Team**: Eli Spiller, Zion Tippetts
-    - **Date**: November 2025
+    - **Date**: Fall 2025
     """)
     
     st.markdown("---")
@@ -114,7 +156,11 @@ def data_explorer_page(df):
     st.sidebar.header("Filters")
     
     # Season filter
-    seasons = sorted(df['Season'].unique()) if 'Season' in df.columns else []
+    if 'Season' in df.columns:
+        # Convert to numeric, filter out NaN, then sort
+        seasons = sorted([int(s) for s in df['Season'].unique() if pd.notna(s)])
+    else:
+        seasons = []
     selected_seasons = st.sidebar.multiselect(
         "Select Seasons",
         options=seasons,
@@ -122,7 +168,12 @@ def data_explorer_page(df):
     )
     
     # Team filter
-    teams = sorted(df['Team'].unique()) if 'Team' in df.columns else []
+    if 'Team' in df.columns:
+        # Convert Team column to string (handling NaN) for consistent filtering
+        # Get unique teams, convert to string, filter out NaN, then sort
+        teams = sorted([str(t) for t in df['Team'].unique() if pd.notna(t)])
+    else:
+        teams = []
     selected_teams = st.sidebar.multiselect(
         "Select Teams",
         options=teams,
@@ -134,7 +185,8 @@ def data_explorer_page(df):
     if selected_seasons:
         filtered_df = filtered_df[filtered_df['Season'].isin(selected_seasons)]
     if selected_teams:
-        filtered_df = filtered_df[filtered_df['Team'].isin(selected_teams)]
+        # Convert Team column to string for consistent type matching
+        filtered_df = filtered_df[filtered_df['Team'].astype(str).isin(selected_teams)]
     
     # Display dataset info
     col1, col2, col3, col4 = st.columns(4)
@@ -201,6 +253,9 @@ def data_explorer_page(df):
                 ax.set_xlabel("Playoff Games Won")
                 ax.set_ylabel("Frequency")
                 ax.set_title("Distribution of Playoff Games Won")
+                # Set x-axis ticks to integers only
+                max_games = int(filtered_df['playoff_games_won'].max())
+                ax.set_xticks(range(0, max_games + 1))
                 st.pyplot(fig)
                 plt.close()
             
@@ -235,6 +290,182 @@ def data_explorer_page(df):
                     ax.set_title("Correlation Heatmap")
                     st.pyplot(fig)
                     plt.close()
+            
+            # Model Residual Plots
+            st.write("#### Model Residual Diagnostics")
+            try:
+                # Get model for residual analysis (uses full dataset)
+                model = load_model(df)
+                if model is not None and hasattr(model, 'resid_pearson'):
+                    # Get residuals and fitted values from the model
+                    residuals = model.resid_pearson
+                    fitted = model.fittedvalues
+                    
+                    # Residuals vs Fitted
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    ax.scatter(fitted, residuals, alpha=0.7)
+                    ax.axhline(0, color='red', linestyle='--')
+                    ax.set_xlabel("Fitted values")
+                    ax.set_ylabel("Pearson residuals")
+                    ax.set_title("Residuals vs Fitted")
+                    ax.grid(True, alpha=0.3)
+                    st.pyplot(fig)
+                    plt.close()
+                    
+                    # Histogram of residuals
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    ax.hist(residuals, bins=15, density=True, alpha=0.6, edgecolor='black')
+                    ax.set_xlabel("Pearson Residuals")
+                    ax.set_ylabel("Density")
+                    ax.set_title("Histogram of Pearson Residuals")
+                    ax.grid(True, alpha=0.3)
+                    st.pyplot(fig)
+                    plt.close()
+                    
+                    # QQ Plot
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    sm.qqplot(residuals, line='45', ax=ax)
+                    ax.set_title("QQ Plot of Pearson Residuals")
+                    st.pyplot(fig)
+                    plt.close()
+                else:
+                    st.warning("Model not available or does not have residual attributes.")
+            except Exception as e:
+                st.warning(f"Could not generate residual plots: {str(e)}")
+            
+            # Clustering Analysis
+            st.write("#### Clustering Analysis")
+            
+            try:
+                # Prepare data to rename columns (IAY/PA -> IAY_PA, etc.)
+                df_prepared, _ = prepare_data(filtered_df.copy())
+                
+                # Map of feature names (both original and renamed)
+                feature_map = {
+                    'IAY_PA': ['IAY_PA', 'IAY/PA'],
+                    'YAC_Cmp': ['YAC_Cmp', 'YAC/Cmp'],
+                    'IntPerAtt': ['IntPerAtt'],
+                    'DropPct': ['DropPct', 'Drop%'],
+                    'BadPct': ['BadPct', 'Bad%']
+                }
+                
+                # Check which features are available (check both original and renamed names)
+                available_features = []
+                feature_mapping = {}  # Map to standardized names
+                
+                for std_name, possible_names in feature_map.items():
+                    found = False
+                    for name in possible_names:
+                        if name in df_prepared.columns:
+                            available_features.append(std_name)
+                            feature_mapping[std_name] = name
+                            found = True
+                            break
+                    if not found and std_name == 'IntPerAtt':
+                        # Try to calculate IntPerAtt
+                        if 'Int' in df_prepared.columns and 'Att' in df_prepared.columns:
+                            df_prepared['IntPerAtt'] = df_prepared['Int'] / df_prepared['Att']
+                            available_features.append('IntPerAtt')
+                            feature_mapping['IntPerAtt'] = 'IntPerAtt'
+                
+                if len(available_features) >= 3:
+                    # Use standardized feature names, but get actual column names from mapping
+                    actual_cols = [feature_mapping[f] for f in available_features]
+                    # Prepare data for clustering (use actual column names)
+                    clustering_data = df_prepared[actual_cols].dropna()
+                    
+                    if len(clustering_data) > 0:
+                        # Standardize
+                        scaler = StandardScaler()
+                        X_scaled = scaler.fit_transform(clustering_data)
+                        
+                        # Elbow Method
+                        st.write("##### Elbow Method for Optimal k")
+                        inertia = []
+                        K = range(1, 10)
+                        for k in K:
+                            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+                            kmeans.fit(X_scaled)
+                            inertia.append(kmeans.inertia_)
+                        
+                        fig, ax = plt.subplots(figsize=(8, 6))
+                        ax.plot(K, inertia, 'bo-')
+                        ax.set_xlabel('Number of clusters k')
+                        ax.set_ylabel('Inertia')
+                        ax.set_title('Elbow Method for k')
+                        ax.grid(True, alpha=0.3)
+                        st.pyplot(fig)
+                        plt.close()
+                        
+                        # KMeans Clustering with PCA
+                        st.write("##### KMeans Clusters (k=2 and k=4)")
+                        candidate_ks = [2, 4]
+                        
+                        # Prepare PCA
+                        pca = PCA(n_components=2)
+                        X_pca = pca.fit_transform(X_scaled)
+                        
+                        # Create side-by-side plots
+                        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+                        
+                        for i, k in enumerate(candidate_ks):
+                            # Fit KMeans
+                            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+                            clusters = kmeans.fit_predict(X_scaled)
+                            
+                            # Plot
+                            ax = axes[i]
+                            for cluster in range(k):
+                                subset = X_pca[clusters == cluster]
+                                ax.scatter(subset[:, 0], subset[:, 1], label=f'Cluster {cluster}', s=50, alpha=0.6)
+                            
+                            ax.set_title(f'KMeans Clusters (k={k})')
+                            ax.set_xlabel('PCA 1')
+                            ax.set_ylabel('PCA 2')
+                            ax.legend()
+                            ax.grid(True, alpha=0.3)
+                        
+                        plt.tight_layout()
+                        st.pyplot(fig)
+                        plt.close()
+                        
+                        # Clusters with Feature Vectors
+                        st.write("##### Clusters with Feature Vectors (k=2)")
+                        kmeans = KMeans(n_clusters=2, random_state=42, n_init=10)
+                        clusters = kmeans.fit_predict(X_scaled)
+                        
+                        # Get loadings (use standardized feature names for display)
+                        loadings = pd.DataFrame(pca.components_, columns=available_features, index=['PCA1', 'PCA2'])
+                        
+                        fig, ax = plt.subplots(figsize=(10, 8))
+                        
+                        # Plot clusters
+                        for cluster in range(2):
+                            subset = X_pca[clusters == cluster]
+                            ax.scatter(subset[:, 0], subset[:, 1], label=f'Cluster {cluster}', s=50, alpha=0.6)
+                        
+                        # Plot feature vectors
+                        for i, feature in enumerate(available_features):
+                            ax.arrow(0, 0, loadings.loc['PCA1', feature]*3, loadings.loc['PCA2', feature]*3, 
+                                    color='r', alpha=0.7, head_width=0.1)
+                            ax.text(loadings.loc['PCA1', feature]*3.2, loadings.loc['PCA2', feature]*3.2, 
+                                   feature, color='r', fontsize=9)
+                        
+                        ax.set_xlabel('PCA 1')
+                        ax.set_ylabel('PCA 2')
+                        ax.set_title('Clusters with Feature Vectors')
+                        ax.legend()
+                        ax.grid(True, alpha=0.3)
+                        st.pyplot(fig)
+                        plt.close()
+                    else:
+                        st.warning("Not enough data points for clustering after removing missing values.")
+                else:
+                    # Show helpful message about what was found
+                    found_cols = [c for c in df_prepared.columns if any(f in c for f in ['IAY', 'YAC', 'Int', 'Drop', 'Bad', 'Cmp'])]
+                    st.info(f"Clustering analysis requires at least 3 of: IAY_PA (or IAY/PA), YAC_Cmp (or YAC/Cmp), IntPerAtt, DropPct (or Drop%), BadPct (or Bad%). Found {len(available_features)}: {available_features}. Available relevant columns: {found_cols[:10]}")
+            except Exception as e:
+                st.warning(f"Could not generate clustering visualizations: {str(e)}")
         else:
             st.info("No numeric columns available for visualization.")
     
@@ -253,7 +484,7 @@ def data_explorer_page(df):
 
 
 def predictions_page(df):
-    """Display the predictions page (placeholder for model)."""
+    """Display the predictions page with model integration."""
     st.title("🔮 Predictions")
     st.markdown("---")
     
@@ -261,16 +492,32 @@ def predictions_page(df):
         st.warning("No data available. Please check data files.")
         return
     
-    st.info("""
-    ⚠️ **Model Integration Pending**
+    # Load model
+    model = load_model(df)
     
-    This section will be populated with the predictive model once it's ready.
-    The model will use advanced passing statistics to predict playoff wins.
-    """)
+    if model is None:
+        st.error("Unable to load model. Please check the data and try again.")
+        return
+    
+    # Display model information
+    with st.expander("📚 Model Information", expanded=False):
+        st.markdown("""
+        **Model Type**: Poisson Generalized Linear Model (GLM)
+        
+        **Selected Variables** (from Cross-Validation, Rank 1):
+        - IAY_PA (Intended Air Yards per Attempt)
+        - YAC_Cmp (Yards After Catch per Completion)
+        - IntPerAtt (Interceptions per Attempt = Int / Att)
+        
+        **Model Performance**:
+        - Pseudo R-squared: ~0.15
+        - Residual deviance / df: ~1.24
+        - Selected via 5-fold cross-validation (best model by deviance)
+        """)
     
     st.markdown("---")
     
-    # Placeholder for input form
+    # Input form
     st.subheader("Input Parameters")
     st.markdown("Enter quarterback statistics to predict playoff wins:")
     
@@ -279,54 +526,126 @@ def predictions_page(df):
     with col1:
         st.write("**Advanced Passing Metrics**")
         iay_pa = st.number_input("IAY/PA (Intended Air Yards per Attempt)", 
-                                 min_value=0.0, max_value=20.0, value=7.0, step=0.1)
-        cay_pa = st.number_input("CAY/PA (Completed Air Yards per Attempt)", 
-                                 min_value=0.0, max_value=15.0, value=4.0, step=0.1)
+                                 min_value=0.0, max_value=20.0, value=7.0, step=0.1,
+                                 help="Average intended air yards per pass attempt")
         yac_cmp = st.number_input("YAC/Cmp (Yards After Catch per Completion)", 
-                                  min_value=0.0, max_value=10.0, value=5.0, step=0.1)
-        prss_pct = st.number_input("Prss% (Pressure Percentage)", 
-                                   min_value=0.0, max_value=100.0, value=20.0, step=0.1)
+                                  min_value=0.0, max_value=10.0, value=5.0, step=0.1,
+                                  help="Average yards after catch per completion")
     
     with col2:
-        st.write("**Additional Metrics**")
-        pkt_time = st.number_input("PktTime (Pocket Time)", 
-                                   min_value=0.0, max_value=5.0, value=2.5, step=0.1)
-        drop_pct = st.number_input("Drop% (Drop Percentage)", 
-                                   min_value=0.0, max_value=20.0, value=5.0, step=0.1)
-        bad_pct = st.number_input("Bad% (Bad Throw Percentage)", 
-                                 min_value=0.0, max_value=50.0, value=15.0, step=0.1)
-        interceptions = st.number_input("Int (Interceptions)", 
-                                       min_value=0, max_value=10, value=1, step=1)
+        st.write("**Interception Metrics**")
+        interceptions = st.number_input("Int (Total Interceptions)", 
+                                       min_value=0, max_value=10, value=1, step=1,
+                                       help="Total number of interceptions")
+        attempts = st.number_input("Att (Total Pass Attempts)", 
+                                  min_value=1, max_value=200, value=50, step=1,
+                                  help="Total number of pass attempts")
+        
+        # Calculate IntPerAtt
+        if attempts > 0:
+            int_per_att = interceptions / attempts
+            st.info(f"**IntPerAtt**: {int_per_att:.4f} (calculated as Int / Att)")
+        else:
+            int_per_att = 0.0
+            st.warning("Attempts must be greater than 0")
     
     st.markdown("---")
     
-    # Placeholder for prediction button and results
+    # Prediction button and results
     if st.button("🔮 Predict Playoff Wins", type="primary", use_container_width=True):
-        st.warning("""
-        **Model not yet integrated**
+        try:
+            # Calculate IntPerAtt
+            if attempts <= 0:
+                st.error("Pass attempts must be greater than 0")
+                return
+            
+            int_per_att = interceptions / attempts
+            
+            # Prepare input dictionary with correct variable names (3 variables from CV)
+            input_data = {
+                'IAY_PA': iay_pa,
+                'YAC_Cmp': yac_cmp,
+                'IntPerAtt': int_per_att
+            }
+            
+            # Make prediction
+            prediction = predict_playoff_wins(model, input_data)
+            
+            # Display results
+            st.success("### Prediction Results")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Predicted Playoff Wins", f"{prediction:.2f}")
+            with col2:
+                # Calculate confidence interval (approximate)
+                lower_bound = max(0, prediction - 1.0)
+                upper_bound = prediction + 1.0
+                st.metric("Confidence Range", f"{lower_bound:.1f} - {upper_bound:.1f}")
+            with col3:
+                # Round to nearest integer for interpretation
+                rounded_pred = round(prediction)
+                st.metric("Rounded Prediction", f"{rounded_pred} games")
+            
+            st.info("""
+            **Note**: This is a point prediction from a Poisson GLM model. 
+            The actual number of playoff wins is a count variable (0, 1, 2, 3, ...).
+            The model predicts the expected (mean) number of wins.
+            """)
+            
+            # Show input summary
+            with st.expander("📊 Input Summary"):
+                st.write("**Input Parameters:**")
+                st.write(f"- IAY_PA: {iay_pa}")
+                st.write(f"- YAC_Cmp: {yac_cmp}")
+                st.write(f"- Int: {interceptions}")
+                st.write(f"- Att: {attempts}")
+                st.write(f"- IntPerAtt: {int_per_att:.4f} (calculated)")
         
-        This feature will be available once the predictive model is implemented.
-        The model will use the input parameters above to predict the number of 
-        playoff games won.
-        
-        Expected output:
-        - Predicted playoff wins
-        - Confidence interval
-        - Model performance metrics
-        """)
+        except Exception as e:
+            st.error(f"Error making prediction: {str(e)}")
+            st.info("Please ensure all input values are within valid ranges.")
     
     st.markdown("---")
     
-    # Placeholder section for model information
-    with st.expander("📚 Model Information (Coming Soon)"):
-        st.markdown("""
-        Once the model is integrated, this section will display:
+    # Model diagnostics section
+    with st.expander("🔍 Model Diagnostics"):
+        try:
+            # Prepare data for evaluation
+            df_prep, _ = prepare_data(df)
+            
+            # Calculate IntPerAtt for evaluation
+            if 'Int' in df_prep.columns and 'Att' in df_prep.columns:
+                df_prep['IntPerAtt'] = df_prep['Int'] / df_prep['Att']
+            else:
+                st.warning("Cannot calculate IntPerAtt - missing Int or Att columns")
+                return
+            
+            # Use the correct selected variables (3 variables from CV)
+            selected_vars = ['IAY_PA', 'YAC_Cmp', 'IntPerAtt']
+            
+            # Get evaluation metrics
+            eval_results = evaluate_model(model, df_prep, selected_vars)
+            
+            st.write("**Model Evaluation Metrics:**")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Pseudo R²", f"{eval_results['pseudo_r_squared']:.3f}")
+            with col2:
+                st.metric("AIC", f"{eval_results['aic']:.2f}")
+            with col3:
+                st.metric("Overdispersion", f"{eval_results['overdispersion_ratio']:.2f}")
+            
+            st.write("**Variance Inflation Factors (VIF):**")
+            st.dataframe(eval_results['vif'], use_container_width=True)
+            
+            if eval_results['overdispersion_ratio'] > 1.5:
+                st.warning("⚠️ Overdispersion detected. Consider using Negative Binomial regression.")
+            else:
+                st.success("✓ Overdispersion is within acceptable range for Poisson model.")
         
-        - **Model Type**: e.g., Logistic Regression, Decision Trees, etc.
-        - **Model Performance**: Accuracy, Precision, Recall, ROC-AUC scores
-        - **Feature Importance**: Which statistics are most predictive
-        - **Model Assumptions**: Limitations and considerations
-        """)
+        except Exception as e:
+            st.warning(f"Could not compute diagnostics: {str(e)}")
 
 
 def main():

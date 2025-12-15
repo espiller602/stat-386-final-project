@@ -1,0 +1,162 @@
+---
+title: "Final Report"
+subtitle: "Predicting NFL Postseason Wins Using Advanced Passing Statistics"
+author: "Eli Spiller & Zion Tippetts"
+date: "Fall 2025"
+---
+
+## Abstract
+
+This project develops a Python package for predicting NFL postseason wins using advanced passing statistics from Pro-Football-Reference. We analyze quarterback performance metrics including Intended Air Yards per Attempt (IAY/PA), Yards After Catch per Completion (YAC/Cmp), and Interceptions per Attempt (IntPerAtt) to build a Poisson Generalized Linear Model. The model achieves a pseudo R-squared of 0.15 and successfully identifies key predictors of playoff success.
+
+## 1. Introduction
+
+### 1.1 Background
+
+NFL playoff success is influenced by numerous factors, with quarterback performance being among the most critical. Traditional passing statistics (completions, yards, touchdowns) provide limited insight into the nuanced aspects of quarterback play. Advanced metrics, such as intended air yards and yards after catch, offer deeper understanding of quarterback decision-making and execution.
+
+### 1.2 Objectives
+
+1. Develop a Python package for cleaning and analyzing NFL playoff passing data
+2. Build predictive models to forecast postseason wins
+3. Identify which advanced passing metrics are most predictive of playoff success
+4. Create an interactive application for exploration and prediction
+
+### 1.3 Dataset
+
+Our dataset consists of NFL playoff passing statistics from **2018-2024**, sourced from Pro-Football-Reference. This period was selected because it represents the era for which advanced statistics are reliably available. The dataset includes:
+
+- **Advanced Metrics**: IAY/PA, CAY/PA, YAC/Cmp, Pressure %, Drop %, Bad Throw %
+- **Standard Metrics**: Completions, Attempts, Yards, Touchdowns, Interceptions
+- **Outcome Variable**: Playoff games won (extracted from QB record)
+
+## 2. Methods
+
+### 2.1 Data Collection and Wrangling
+
+Data was collected from Pro-Football-Reference HTML tables for each playoff season. The `build_advanced_dataset()` function:
+
+1. Reads advanced and standard passing statistics from HTML files
+2. Handles multi-level headers and cleans column names
+3. Merges datasets by Player, Team, and Season
+4. Extracts playoff wins from the QBrec field
+
+The `clean_column_names()` function removes duplicate columns and standardizes naming conventions.
+
+### 2.2 Variable Selection
+
+We used Poisson Lasso regression for variable selection, testing alpha values from 0.005 to 0.1. The initial selection identified six variables, but cross-validation revealed that a three-variable model performed best.
+
+### 2.3 Model Development
+
+**Model Type**: Poisson Generalized Linear Model (GLM)
+
+**Selected Variables** (via 5-fold cross-validation):
+- `IAY_PA`: Intended Air Yards per Attempt
+- `YAC_Cmp`: Yards After Catch per Completion
+- `IntPerAtt`: Interceptions per Attempt (calculated as Int / Att)
+
+**Rationale**: 
+- Poisson distribution is appropriate for count data (playoff wins: 0, 1, 2, 3, ...)
+- Cross-validation selected the model with lowest deviance
+- Three-variable model balances parsimony with predictive power
+
+### 2.4 Model Evaluation
+
+We evaluated the model using:
+- **Pseudo R-squared**: Measures model fit
+- **Residual Deviance**: Assesses model adequacy
+- **Variance Inflation Factors (VIF)**: Checks for multicollinearity
+- **Overdispersion Ratio**: Validates Poisson assumption
+
+## 3. Results
+
+### 3.1 Model Performance
+
+- **Pseudo R²**: 0.1506
+- **Residual Deviance / df**: 1.24
+- **AIC**: 246.00
+- **Overdispersion Ratio**: 1.15 (acceptable for Poisson model)
+
+### 3.2 Variable Importance
+
+The final model coefficients:
+
+| Variable | Coefficient | p-value | Interpretation |
+|----------|-------------|---------|----------------|
+| IAY_PA | -0.1185 | 0.096 | Negative relationship (more aggressive passing may reduce wins) |
+| YAC_Cmp | 0.1773 | 0.046* | Positive relationship (better receiver play increases wins) |
+| IntPerAtt | -11.8127 | 0.042* | Strong negative relationship (turnovers significantly reduce wins) |
+
+\* Statistically significant at α = 0.05
+
+### 3.3 Key Findings
+
+1. **YAC_Cmp** is the strongest positive predictor - teams with receivers who gain more yards after catch tend to win more playoff games
+2. **IntPerAtt** has the strongest negative effect - interceptions per attempt is highly predictive of playoff losses
+3. **IAY_PA** shows a negative (though not statistically significant) relationship, suggesting that overly aggressive downfield passing may not always be optimal
+
+### 3.4 Model Diagnostics
+
+- **VIF Values**: All < 1.25, indicating no multicollinearity concerns
+- **Overdispersion**: Ratio of 1.15 is within acceptable range for Poisson models
+- **Residual Analysis**: Residuals show reasonable distribution around zero
+
+## 4. Discussion
+
+### 4.1 Interpretation
+
+The model suggests that playoff success is most strongly associated with:
+1. **Ball Security**: Minimizing interceptions per attempt
+2. **Receiver Production**: Maximizing yards after catch
+3. **Balanced Passing**: Moderate intended air yards (not too aggressive)
+
+### 4.2 Limitations
+
+1. **Small Sample Size**: Limited number of playoff games per season
+2. **Contextual Factors**: Model doesn't account for opponent strength, weather, injuries
+3. **Team Factors**: Model focuses on QB stats but doesn't include defense, special teams, etc.
+4. **Linearity Assumption**: Poisson GLM assumes linear relationships on the log scale
+
+### 4.3 Future Work
+
+- Include defensive statistics as predictors
+- Account for opponent strength
+- Explore non-linear relationships
+- Consider team-level aggregations
+- Extend to regular season predictions
+
+## 5. Conclusion
+
+We successfully developed a Python package for predicting NFL playoff wins using advanced passing statistics. The final model uses three key predictors (IAY_PA, YAC_Cmp, IntPerAtt) and achieves reasonable predictive performance. The package provides tools for data cleaning, analysis, and interactive exploration through a Streamlit application.
+
+The model highlights the importance of ball security (low IntPerAtt) and receiver production (high YAC_Cmp) in playoff success, providing actionable insights for teams and analysts.
+
+## References
+
+1. Pro-Football-Reference. NFL Player & Team Stats. https://www.pro-football-reference.com
+2. James, G., Witten, D., Hastie, T., & Tibshirani, R. (2013). An Introduction to Statistical Learning: with Applications in R. Springer.
+3. Kuhn, M., & Johnson, K. (2013). Applied Predictive Modeling. Springer.
+
+## Appendix
+
+### A. Package Installation
+
+```bash
+pip install -r requirements.txt
+pip install -e .
+```
+
+### B. Streamlit App
+
+Run the interactive application:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+### C. GitHub Repository
+
+All code and documentation available at:
+https://github.com/espiller602/stat-386-final-project
+

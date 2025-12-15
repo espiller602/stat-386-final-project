@@ -1,0 +1,31 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "NFL Playoff Predictor"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: wrangling.qmd
+        text: Data Wrangling
+      - href: analysis.qmd
+        text: Analysis
+      - href: tutorial.qmd
+        text: Tutorial
+      - href: report.qmd
+        text: Report
+  sidebar:
+    style: "docked"
+    tools:
+      - icon: github
+        href: https://github.com/espiller602/stat-386-final-project
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    code-fold: show
+

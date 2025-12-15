@@ -1,0 +1,172 @@
+---
+title: "Tutorial"
+---
+
+## Complete Workflow Tutorial
+
+This tutorial walks you through a complete analysis workflow using the NFL Playoff Predictor package.
+
+## Step 1: Install and Import
+
+First, install the package and import necessary modules:
+
+```python
+# Install the package (if not already installed)
+# pip install -e .
+
+# Import required modules
+import pandas as pd
+from nfl_playoff_predictor.wrangling import process_and_save_dataset
+from nfl_playoff_predictor.analysis import (
+    get_default_model,
+    predict_playoff_wins,
+    evaluate_model
+)
+```
+
+## Step 2: Prepare Your Data
+
+If you have raw data files in the `data sources/` directory, use the complete pipeline:
+
+```python
+# Process and save the dataset
+df = process_and_save_dataset(
+    data_dir="data sources",
+    output_file="clean_playoff_passing.csv",
+    start_year=2018,
+    end_year=2024
+)
+
+print(f"Dataset shape: {df.shape}")
+print(f"Columns: {df.columns.tolist()}")
+```
+
+Alternatively, if you already have a cleaned CSV file:
+
+```python
+df = pd.read_csv("clean_playoff_passing.csv")
+```
+
+## Step 3: Explore the Data
+
+```python
+# Basic information
+print(df.info())
+print(df.describe())
+
+# Check for missing values
+print(df.isnull().sum())
+
+# View the first few rows
+print(df.head())
+```
+
+## Step 4: Train the Model
+
+Get the default trained model (uses best variables from cross-validation):
+
+```python
+# Train the model
+model = get_default_model(df)
+
+# View model summary
+print(model.summary())
+```
+
+The model uses three predictors:
+- `IAY_PA`: Intended Air Yards per Attempt
+- `YAC_Cmp`: Yards After Catch per Completion  
+- `IntPerAtt`: Interceptions per Attempt (calculated as Int / Att)
+
+## Step 5: Make Predictions
+
+Predict playoff wins for a quarterback:
+
+```python
+# Example: Predict for a quarterback with:
+# - IAY/PA = 7.0
+# - YAC/Cmp = 5.0
+# - Int = 2, Att = 100 (so IntPerAtt = 0.02)
+
+prediction = predict_playoff_wins(model, {
+    'IAY_PA': 7.0,
+    'YAC_Cmp': 5.0,
+    'IntPerAtt': 2 / 100  # 0.02
+})
+
+print(f"Predicted playoff wins: {prediction:.2f}")
+```
+
+## Step 6: Evaluate Model Performance
+
+```python
+# Evaluate the model
+selected_vars = ['IAY_PA', 'YAC_Cmp', 'IntPerAtt']
+results = evaluate_model(model, df, selected_vars)
+
+# View metrics
+print(f"Pseudo R²: {results['pseudo_r_squared']:.3f}")
+print(f"AIC: {results['aic']:.2f}")
+print(f"Overdispersion ratio: {results['overdispersion_ratio']:.2f}")
+
+# Check VIF values
+print("\nVariance Inflation Factors:")
+print(results['vif'])
+```
+
+## Step 7: Use the Streamlit App
+
+For an interactive experience, run the Streamlit app:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The app provides:
+- **Data Explorer**: Interactive data exploration with filters and visualizations
+- **Predictions**: Make predictions using the trained model
+- **Model Diagnostics**: View model performance metrics
+
+## Complete Example
+
+Here's a complete example combining all steps:
+
+```python
+import pandas as pd
+from nfl_playoff_predictor.wrangling import process_and_save_dataset
+from nfl_playoff_predictor.analysis import get_default_model, predict_playoff_wins
+
+# 1. Prepare data
+df = process_and_save_dataset("data sources", "clean_playoff_passing.csv")
+
+# 2. Train model
+model = get_default_model(df)
+
+# 3. Make a prediction
+prediction = predict_playoff_wins(model, {
+    'IAY_PA': 7.5,
+    'YAC_Cmp': 5.2,
+    'IntPerAtt': 0.015
+})
+
+print(f"Predicted playoff wins: {prediction:.2f}")
+```
+
+## Tips and Best Practices
+
+1. **Data Quality**: Ensure your data files are properly formatted and named correctly
+2. **Missing Values**: The functions handle missing values by dropping rows with any missing predictors
+3. **Model Interpretation**: Remember that predictions are expected values (means) from a Poisson distribution
+4. **Feature Engineering**: The package automatically calculates `IntPerAtt` from `Int` and `Att`
+
+## Troubleshooting
+
+**Issue**: Model training fails
+- **Solution**: Ensure your dataframe has the required columns: `Int`, `Att`, `IAY/PA`, `YAC/Cmp`
+
+**Issue**: Prediction returns unexpected values
+- **Solution**: Check that input values are within reasonable ranges (e.g., IntPerAtt should be between 0 and ~0.1)
+
+**Issue**: Import errors
+- **Solution**: Make sure you've installed the package: `pip install -e .`
+
