@@ -184,6 +184,8 @@ def predict_playoff_wins(model, predictors_dict):
     
     # Make prediction
     prediction = model.predict(pred_df)
+    # Print the prediction
+    print(f"Predicted playoff wins: {predicted_value:.2f}")
     
     return float(prediction.iloc[0])
 
