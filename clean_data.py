@@ -53,8 +53,6 @@ def main():
             end_year=end_year
         )
         
-        df['playoff_games_won'] = pd.to_numeric(df['playoff_games_won'], errors='coerce').fillna(0).astype(int)
-        df.to_csv(output_file, index=False)
         print(f"✓ Successfully processed {len(df)} records")
         print(f"✓ Saved cleaned data to {output_file}")
         print(f"✓ Dataset contains {len(df.columns)} columns")
