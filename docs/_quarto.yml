@@ -1,10 +1,10 @@
 project:
   type: website
   output-dir: _site
-  base-url: /stat-386-final-project/
 
 website:
   title: "NFL Playoff Predictor"
+  base-url: /stat-386-final-project/
   navbar:
     left:
       - href: index.qmd
