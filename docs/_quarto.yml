@@ -4,7 +4,6 @@ project:
 
 website:
   title: "NFL Playoff Predictor"
-  base-url: /stat-386-final-project/
   navbar:
     left:
       - href: index.qmd
