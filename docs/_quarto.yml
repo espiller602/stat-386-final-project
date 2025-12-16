@@ -24,9 +24,8 @@ website:
 
 format:
   html:
-    theme: 
-      - default
-      - styles.css
+    theme: default
+    css: styles.css
     toc: true
     code-fold: show
     code-tools: true
