@@ -52,7 +52,7 @@ def main():
             start_year=start_year,
             end_year=end_year
         )
-        
+    
         print(f"✓ Successfully processed {len(df)} records")
         print(f"✓ Saved cleaned data to {output_file}")
         print(f"✓ Dataset contains {len(df.columns)} columns")
