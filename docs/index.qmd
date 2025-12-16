@@ -56,10 +56,10 @@ nfl_playoff_predictor/
 
 ## Documentation
 
-- [Data Wrangling Functions](wrangling.qmd) - Functions for cleaning and preparing data
-- [Analysis Functions](analysis.qmd) - Modeling and prediction functions
-- [Tutorial](tutorial.qmd) - Step-by-step guide to using the package
-- [Final Report](report.qmd) - Complete project report
+- [Data Wrangling Functions](wrangling.html) - Functions for cleaning and preparing data
+- [Analysis Functions](analysis.html) - Modeling and prediction functions
+- [Tutorial](tutorial.html) - Step-by-step guide to using the package
+- [Final Report](report.html) - Complete project report
 
 ## Authors
 
@@ -70,5 +70,6 @@ STAT 386 Final Project - Fall 2025
 ## Links
 
 - [GitHub Repository](https://github.com/espiller602/stat-386-final-project)
-- [Streamlit App](https://your-streamlit-app-url.streamlit.app) *(to be deployed)*
+- [GitHub Pages Documentation](https://espiller602.github.io/stat-386-final-project/)
+- [Streamlit App](https://your-streamlit-app-url.streamlit.app) *(to be deployed - update with actual URL once deployed)*
 
