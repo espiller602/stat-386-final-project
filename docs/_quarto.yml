@@ -1,6 +1,7 @@
 project:
   type: website
   output-dir: _site
+  base-url: /stat-386-final-project/
 
 website:
   title: "NFL Playoff Predictor"
@@ -24,8 +25,11 @@ website:
 
 format:
   html:
-    theme: cosmo
-    css: styles.css
+    theme: 
+      - default
+      - styles.css
     toc: true
     code-fold: show
+    code-tools: true
+    anchor-sections: true
 
