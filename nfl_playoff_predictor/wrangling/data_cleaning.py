@@ -103,7 +103,7 @@ def build_advanced_dataset(data_dir, start_year=2018, end_year=2024):
             return pd.NA
 
     merged_df['playoff_games_won'] = merged_df['QBrec'].apply(extract_wins)
-    merged_df['playoff_games_won'] = pd.to_numeric(merged_df['playoff_games_won'], errors='coerce').fillna(0).astype(int)
+    merged_df['playoff_games_won'] = pd.to_numeric(merged_df['playoff_games_won'], errors='coerce').astype('Int64')
     return merged_df
 
 
