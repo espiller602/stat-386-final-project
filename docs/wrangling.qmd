@@ -13,7 +13,9 @@ The `nfl_playoff_predictor.wrangling` module provides functions for cleaning and
 Builds a combined dataset from NFL playoff passing statistics across multiple seasons.
 
 **Parameters:**
-- `data_dir` (str): Directory containing data files
+- `data_dir` (str): Directory containing data files. Files must be named exactly:
+  - `{YEAR}_Playoffs_Advanced.xls` (e.g., `2018_Playoffs_Advanced.xls`)
+  - `{YEAR}_Standard_Passing.xls` (e.g., `2018_Standard_Passing.xls`)
 - `start_year` (int, default=2018): First year to include
 - `end_year` (int, default=2024): Last year to include (inclusive)
 
@@ -25,16 +27,27 @@ Builds a combined dataset from NFL playoff passing statistics across multiple se
 ```python
 from nfl_playoff_predictor.wrangling import build_advanced_dataset
 
+# Ensure files are named correctly in "data sources/" directory:
+# - 2018_Playoffs_Advanced.xls
+# - 2018_Standard_Passing.xls
+# - 2019_Playoffs_Advanced.xls
+# - 2019_Standard_Passing.xls
+# etc.
+
 df = build_advanced_dataset("data sources", start_year=2018, end_year=2024)
 print(df.head())
 ```
 
 **What it does:**
-1. Reads advanced passing statistics from HTML files (e.g., `2018_Playoffs_Advanced.xls`)
-2. Reads standard passing statistics (e.g., `2018_Standard_Passing.xls`)
-3. Merges datasets by Player, Team, and Season
-4. Extracts playoff wins from QBrec field
-5. Returns combined dataset for all specified years
+1. Searches for files matching `{YEAR}_Playoffs_Advanced.xls` and `{YEAR}_Standard_Passing.xls` in the specified directory
+2. Reads advanced passing statistics from HTML tables (files have `.xls` extension but contain HTML)
+3. Reads standard passing statistics from HTML tables
+4. Filters out "League Average" rows
+5. Merges datasets by Player, Team, and Season
+6. Extracts playoff wins from QBrec field (format: "W-L" where W is wins)
+7. Returns combined dataset for all specified years
+
+**Note:** Files must be downloaded from Pro-Football-Reference and saved with the exact naming format shown above. The function will skip years where files are not found and print a warning message.
 
 ---
 

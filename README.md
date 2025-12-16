@@ -38,6 +38,12 @@ nfl_playoff_predictor/
 
 ### Data Wrangling
 
+**Data File Requirements:**
+- Download NFL playoff passing statistics from [Pro-Football-Reference](https://www.pro-football-reference.com)
+- Files must be named exactly: `{YEAR}_Playoffs_Advanced.xls` and `{YEAR}_Standard_Passing.xls`
+- Example: `2018_Playoffs_Advanced.xls`, `2018_Standard_Passing.xls`
+- Place all files in a directory (e.g., `data sources/`)
+
 ```python
 from nfl_playoff_predictor.wrangling import (
     build_advanced_dataset,

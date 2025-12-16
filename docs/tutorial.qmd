@@ -26,12 +26,41 @@ from nfl_playoff_predictor.analysis import (
 
 ## Step 2: Prepare Your Data
 
-If you have raw data files in the `data sources/` directory, use the complete pipeline:
+### Data File Requirements
+
+Before running the data processing functions, you need to download NFL playoff passing statistics from [Pro-Football-Reference](https://www.pro-football-reference.com). 
+
+**File Naming Format:**
+- Files must be named exactly: `{YEAR}_Playoffs_Advanced.xls` and `{YEAR}_Standard_Passing.xls`
+- Example: `2018_Playoffs_Advanced.xls`, `2018_Standard_Passing.xls`
+- The files should be HTML tables saved with `.xls` extension (Pro-Football-Reference exports)
+
+**Directory Structure:**
+- Create a directory called `data sources/` (or any name you prefer)
+- Place all data files in this directory
+- The directory can be in the same location as your Python script or package
+
+**Example directory structure:**
+```
+your-project/
+├── data sources/
+│   ├── 2018_Playoffs_Advanced.xls
+│   ├── 2018_Standard_Passing.xls
+│   ├── 2019_Playoffs_Advanced.xls
+│   ├── 2019_Standard_Passing.xls
+│   └── ... (one pair for each year)
+├── nfl_playoff_predictor/
+└── streamlit_app.py
+```
+
+### Processing the Data
+
+Once your data files are properly named and in the correct directory:
 
 ```python
 # Process and save the dataset
 df = process_and_save_dataset(
-    data_dir="data sources",
+    data_dir="data sources",  # Path to directory containing data files
     output_file="clean_playoff_passing.csv",
     start_year=2018,
     end_year=2024
@@ -40,6 +69,15 @@ df = process_and_save_dataset(
 print(f"Dataset shape: {df.shape}")
 print(f"Columns: {df.columns.tolist()}")
 ```
+
+**Note:** The function will automatically:
+- Find files matching the naming pattern for each year
+- Skip years where files are missing (with a warning message)
+- Filter out "League Average" rows
+- Merge advanced and standard passing statistics
+- Extract playoff wins from the QBrec field
+
+### Using Pre-cleaned Data
 
 Alternatively, if you already have a cleaned CSV file:
 
@@ -161,6 +199,13 @@ print(f"Predicted playoff wins: {prediction:.2f}")
 
 ## Troubleshooting
 
+**Issue**: No files found for year X
+- **Solution**: 
+  - Ensure files are named exactly: `{YEAR}_Playoffs_Advanced.xls` and `{YEAR}_Standard_Passing.xls`
+  - Check that files are in the correct directory (specified by `data_dir` parameter)
+  - Verify file extensions are `.xls` (even though they're HTML tables)
+  - Make sure the year in the filename matches the year range you're processing
+
 **Issue**: Model training fails
 - **Solution**: Ensure your dataframe has the required columns: `Int`, `Att`, `IAY/PA`, `YAC/Cmp`
 
@@ -169,4 +214,10 @@ print(f"Predicted playoff wins: {prediction:.2f}")
 
 **Issue**: Import errors
 - **Solution**: Make sure you've installed the package: `pip install -e .`
+
+**Issue**: Files not found error
+- **Solution**: 
+  - Verify the `data_dir` path is correct (relative to your current working directory)
+  - Check that the directory exists and contains the data files
+  - On Windows, use forward slashes or raw strings: `r"data sources"` or `"data sources/"`
 
