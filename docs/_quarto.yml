@@ -4,6 +4,7 @@ project:
 
 website:
   title: "NFL Playoff Predictor"
+  site-url: https://espiller602.github.io/stat-386-final-project
   navbar:
     left:
       - href: index.qmd
