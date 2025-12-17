@@ -90,7 +90,7 @@ Because the dataset contains many correlated predictors and the sample size is s
 - Fitted lasso-penalized Poisson regression with cross-validation to choose the penalty parameter  
 - Identified variables with non-zero coefficients in the final model
 
-The lasso-optimized model retained three primary predictors:
+The lasso-optimized poisson model retained three primary predictors:
 
 - Intended Air Yards per Completion (IAY_PA)  
 - Yards After Catch per Completion (YAC_Cmp)  
@@ -125,6 +125,10 @@ It is important to note that many factors beyond QB performance influence playof
 
 Overall, these findings indicate that in the postseason, maximizing efficiency and minimizing mistakes is more predictive of success than high-risk, high-reward strategies.
 
+All data collection, wrangling, modeling, and visualization steps are fully reproducible using the provided Python package and scripts. The package handles raw data ingestion from Pro Football Reference HTML tables, feature engineering, and model fitting. The Streamlit app uses the same underlying codebase and fitted model parameters.
+
+
 # References
 
 - Pro Football Reference, Advanced Passing Tables (2018–2024)
+- Pennsylvania State University. (n.d.). 12.3 – Poisson regression. STAT 462: Applied Regression Analysis. Retrieved December 17, 2025, from https://online.stat.psu.edu/stat462/node/209/
