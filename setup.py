@@ -31,6 +31,12 @@ setup(
     include_package_data=True,
     package_data={
         "": ["*.csv", "*.xls", "*.xlsx"],
+        "nfl_playoff_predictor": ["streamlit_app.py"],
+    },
+    entry_points={
+        "console_scripts": [
+            "nfl-playoff-predictor-app=nfl_playoff_predictor.app:launch_app",
+        ],
     },
 )
 

@@ -1,5 +1,6 @@
 include README.md
 include requirements.txt
+include streamlit_app.py
 recursive-include nfl_playoff_predictor *.py
 recursive-include "data sources" *.xls *.xlsx
 

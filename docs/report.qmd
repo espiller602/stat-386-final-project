@@ -2,7 +2,7 @@
 title: "Final Report"
 subtitle: "Predicting NFL Postseason Wins Using Advanced Passing Statistics"
 author: "Eli Spiller & Zion Tippetts"
-date: "Fall 2025"
+date: "December 2025"
 ---
 
 ## Abstract
@@ -152,6 +152,10 @@ pip install -e .
 Run the interactive application:
 
 ```bash
+# After installation:
+nfl-playoff-predictor-app
+
+# Or from repository root:
 streamlit run streamlit_app.py
 ```
 

@@ -106,6 +106,10 @@ prediction = predict_playoff_wins(model, {
 Run the interactive Streamlit application:
 
 ```bash
+# After installation, use the command:
+nfl-playoff-predictor-app
+
+# Or if running from the repository root:
 streamlit run streamlit_app.py
 ```
 
