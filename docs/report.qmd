@@ -115,6 +115,20 @@ The model explains a modest portion of playoff win variability (Cox–Snell pseu
 
 *Notes:* Percent change calculated as e^(coefficient) - 1 for 1-unit changes; for IntPerAtt, interpreted per 0.01 increase to match realistic scale. Positive values indicate an increase in expected playoff wins, negative values indicate a decrease.
 
+To complement the statistical analysis, we developed a Streamlit application that provides an interactive interface for exploring the playoff quarterback dataset and visualizing model behavior. The app loads the cleaned postseason passing dataset (2018–2024), allows users to filter by season and team, and supports exploratory data analysis through summary statistics, correlation heatmaps, and distribution plots.
+The Streamlit application is organized into three primary functional components:
+
+-Data Loading and Preparation
+The app loads a cleaned dataset of NFL playoff quarterback passing statistics from 2018–2024. If the cleaned file is not available, the app automatically rebuilds it from the raw Pro Football Reference downloads using the project’s data-wrangling package. League-average rows are removed, and the dataset is cached to ensure consistent and efficient use across sessions.
+
+-Exploratory Data Analysis Interface
+Users can interactively explore the dataset through filters for season and team, tabular previews, downloadable CSV exports, descriptive statistics, and visualizations. These include distributions of playoff wins, scatter plots, correlation heatmaps, and model residual diagnostics. The app also provides exploratory k-means clustering and PCA visualizations to examine structural similarities among playoff quarterbacks, presented strictly as descriptive tools rather than inferential results.
+
+-Model Integration and Prediction
+The app integrates the final lasso-selected Poisson regression model used in the report. Users can input quarterback performance metrics—Intended Air Yards per Attempt (IAY_PA), Yards After Catch per Completion (YAC_Cmp), and Interceptions per Attempt (IntPerAtt)—to generate predicted expected playoff wins. Model summaries, diagnostics (pseudo-R², AIC, overdispersion), and interpretive notes are included to reinforce transparency and consistency with the statistical analysis.
+
+Overall, the Streamlit app functions as an interactive companion to the written analysis, supporting data exploration, model interpretability, and reproducibility rather than serving as a standalone predictive system.
+
 # 6. Discussion
 
 Percent-based interpretations reinforce that playoff QB success is driven less by aggressiveness and more by efficiency, ball security, and post-catch production. Even small increases in interception rate substantially reduce expected playoff wins, while additional YAC per completion significantly improves expected wins.
