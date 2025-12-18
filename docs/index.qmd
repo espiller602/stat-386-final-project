@@ -71,5 +71,5 @@ STAT 386 Final Project - Fall 2025
 
 - [GitHub Repository](https://github.com/espiller602/stat-386-final-project)
 - [GitHub Pages Documentation](https://espiller602.github.io/stat-386-final-project/)
-- [Streamlit App](https://your-streamlit-app-url.streamlit.app) *(to be deployed - update with actual URL once deployed)*
+- [Streamlit App](https://appapppy-ikumpjm4upc94jnve3wevg.streamlit.app/) 
 
