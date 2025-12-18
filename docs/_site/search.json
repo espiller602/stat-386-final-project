@@ -1,0 +1,212 @@
+[
+  {
+    "objectID": "wrangling.html",
+    "href": "wrangling.html",
+    "title": "Data Wrangling Functions",
+    "section": "",
+    "text": "The nfl_playoff_predictor.wrangling module provides functions for cleaning and preparing NFL playoff passing statistics from Pro-Football-Reference HTML tables."
+  },
+  {
+    "objectID": "wrangling.html#overview",
+    "href": "wrangling.html#overview",
+    "title": "Data Wrangling Functions",
+    "section": "",
+    "text": "The nfl_playoff_predictor.wrangling module provides functions for cleaning and preparing NFL playoff passing statistics from Pro-Football-Reference HTML tables."
+  },
+  {
+    "objectID": "wrangling.html#functions",
+    "href": "wrangling.html#functions",
+    "title": "Data Wrangling Functions",
+    "section": "Functions",
+    "text": "Functions\n\nbuild_advanced_dataset()\nBuilds a combined dataset from NFL playoff passing statistics across multiple seasons.\nParameters: - data_dir (str): Directory containing data files. Files must be named exactly: - {YEAR}_Playoffs_Advanced.xls (e.g., 2018_Playoffs_Advanced.xls) - {YEAR}_Standard_Passing.xls (e.g., 2018_Standard_Passing.xls) - start_year (int, default=2018): First year to include - end_year (int, default=2024): Last year to include (inclusive)\nReturns: - pd.DataFrame: Combined dataset with advanced and standard passing statistics\nExample:\nfrom nfl_playoff_predictor.wrangling import build_advanced_dataset\n\n# Ensure files are named correctly in \"data sources/\" directory:\n# - 2018_Playoffs_Advanced.xls\n# - 2018_Standard_Passing.xls\n# - 2019_Playoffs_Advanced.xls\n# - 2019_Standard_Passing.xls\n# etc.\n\ndf = build_advanced_dataset(\"data sources\", start_year=2018, end_year=2024)\nprint(df.head())\nWhat it does: 1. Searches for files matching {YEAR}_Playoffs_Advanced.xls and {YEAR}_Standard_Passing.xls in the specified directory 2. Reads advanced passing statistics from HTML tables (files have .xls extension but contain HTML) 3. Reads standard passing statistics from HTML tables 4. Filters out “League Average” rows 5. Merges datasets by Player, Team, and Season 6. Extracts playoff wins from QBrec field (format: “W-L” where W is wins) 7. Returns combined dataset for all specified years\nNote: Files must be downloaded from Pro-Football-Reference and saved with the exact naming format shown above. The function will skip years where files are not found and print a warning message.\n\n\n\nclean_column_names()\nCleans column names by removing duplicate suffixes and renaming columns after merging.\nParameters: - df (pd.DataFrame): DataFrame with merged advanced and standard passing statistics\nReturns: - pd.DataFrame: DataFrame with cleaned column names\nExample:\nfrom nfl_playoff_predictor.wrangling import build_advanced_dataset, clean_column_names\n\ndf = build_advanced_dataset(\"data sources\")\nclean_df = clean_column_names(df)\nWhat it does: 1. Drops columns ending with _y (duplicates from standard passing) 2. Removes _x suffix from remaining columns 3. Renames Yds.1 to YdsLost for clarity\n\n\n\nprocess_and_save_dataset()\nComplete pipeline: build dataset, clean columns, and save to CSV.\nParameters: - data_dir (str): Directory containing data files - output_file (str, default=“clean_playoff_passing.csv”): Path to output CSV file - start_year (int, default=2018): First year to include - end_year (int, default=2024): Last year to include\nReturns: - pd.DataFrame: Cleaned dataset\nExample:\nfrom nfl_playoff_predictor.wrangling import process_and_save_dataset\n\ndf = process_and_save_dataset(\"data sources\", \"clean_playoff_passing.csv\")\nWhat it does: 1. Calls build_advanced_dataset() to create the dataset 2. Calls clean_column_names() to clean column names 3. Saves the result to a CSV file 4. Returns the cleaned DataFrame"
+  },
+  {
+    "objectID": "wrangling.html#data-requirements",
+    "href": "wrangling.html#data-requirements",
+    "title": "Data Wrangling Functions",
+    "section": "Data Requirements",
+    "text": "Data Requirements\nYour data files should be named in the following format: - {year}_Playoffs_Advanced.xls - Advanced passing statistics - {year}_Standard_Passing.xls - Standard passing statistics\nFor example: - 2018_Playoffs_Advanced.xls - 2018_Standard_Passing.xls - 2019_Playoffs_Advanced.xls - etc."
+  },
+  {
+    "objectID": "wrangling.html#output-columns",
+    "href": "wrangling.html#output-columns",
+    "title": "Data Wrangling Functions",
+    "section": "Output Columns",
+    "text": "Output Columns\nThe cleaned dataset includes: - Player information (Player, Team, Season) - Advanced passing metrics (IAY/PA, CAY/PA, YAC/Cmp, etc.) - Standard passing metrics (Cmp, Att, Yds, TD, Int, etc.) - Derived metrics (playoff_games_won)"
+  },
+  {
+    "objectID": "report.html",
+    "href": "report.html",
+    "title": "Modeling NFL Playoff Success Using Advanced Quarterback Statistics",
+    "section": "",
+    "text": "Abstract\nThis project analyzes which advanced quarterback (QB) statistics best explain playoff success in the NFL. Using postseason data from Pro Football Reference, we compiled an original dataset containing advanced QB efficiency metrics for every playoff quarterback from 2018 through 2024—the first seven seasons in which advanced passing statistics were publicly available. After aggregating CSV files for each season and performing data cleaning, we built a Python package to support wrangling and modeling tasks.\nWe initially selected variables informed by football domain knowledge—Intended Air Yards per Completion (IAY_PA), Completed Air Yards per Completion (CAY_PA), Yards After Catch per Completion (YAC_Cmp), Pressure %, Drop %, and Bad %—as likely predictors of playoff success. Using lasso-regularized Poisson regression to account for the discrete and highly skewed response variable (playoff wins), we found that IAY_PA, YAC_Cmp, and interceptions per pass attempt (IntPerAtt) were the strongest predictors.\nPercent-based interpretations suggest that small improvements in YAC per completion can increase expected playoff wins by roughly 19%, while small increases in interception rate decrease expected wins by approximately 11%. These findings highlight that playoff success is closely tied to both vertical passing efficiency and limiting turnover-worthy plays. The project demonstrates how advanced QB metrics can provide insight into game planning for the high-pressure, high-variance environment of the postseason.\n\n\n1. Introduction / Motivation\nNFL playoff performance is notoriously volatile: game outcomes hinge on small sample sizes, opponent strength varies dramatically, and quarterbacks are often judged on only a handful of high-pressure plays. Understanding which QB attributes consistently contribute to postseason success is both analytically challenging and strategically valuable.\nPro Football Reference began publicly releasing advanced quarterback passing metrics in 2018, making it the first season in which detailed efficiency and accuracy measures became available for postseason analysis. As a result, our study focuses on playoff quarterbacks from 2018–2024, the complete set of seasons with accessible advanced stats.\nResearch question:\nWhich advanced QB metrics best predict playoff wins, and what do they reveal about effective postseason passing strategies?\nWe initially selected a subset of variables from the full set of 50+ advanced stats based on prior football knowledge: IAY/PA, CAY/PA, YAC/Cmp, Prss%, Drop%, and Bad%. These were hypothesized to most strongly influence postseason success due to their relationship with vertical efficiency, explosive playmaking, ball security, and accuracy under pressure.\nBy focusing on this era and these informed variables, we aim to identify performance patterns in an environment where margins are smallest and pressure is highest.\n\n\n2. Data Collection\nAll data was collected from Pro Football Reference’s Advanced Passing tables for each postseason between 2018 and 2024. We began in 2018 because it was the first season in which PFR made advanced passing metrics publicly available; earlier years lack many of the key variables used in our analysis.\nFor each season, we downloaded the advanced playoff quarterback statistics as an Excel file. Each file contains one row per QB who appeared in the postseason during that year and includes about 50 advanced metrics, such as air yards, accuracy measures, pocket performance, pressure statistics, and turnover-worthy metrics. One of the quirks of PFR’s downloads is that they are listed as Excel files but are actually HTML tables, so they needed to be read as HTML rather than Excel.\nAfter downloading the seven yearly Excels and reading the HTML from them for 2018–2024, we aggregated them into a single dataset with:\n\n133 rows\n50 columns of raw advanced QB statistics\nAdditional columns for Season and Playoff_Wins\n\nPlayoff wins were extracted from the PFR QBrec column.\nData limitations include:\n\nEarly-season missingness in stats not yet tracked in 2018 (e.g., OnTgt, OnTgt%)\nMissing values for QBs with extremely limited playoff snaps\nSmall sample size inherent to postseason football\nImbalanced response variable (most quarterbacks win 0 or 1 playoff game)\n\nDespite these limitations, PFR’s consistent formatting across seasons made aggregation feasible and reproducible.\n\n\n3. Data Wrangling and Cleaning\nThe data wrangling process involved consolidating the seven yearly CSVs into a single structured dataset suitable for modeling. Most columns were already standardized by PFR, so the cleaning process focused on harmonizing formats and preparing the response variable.\nKey steps included:\n\nRenaming columns for consistency:\n\n\n\n\nOriginal\nNew\n\n\n\n\nIAY/PA\nIAY_PA\n\n\nCAY/PA\nCAY_PA\n\n\nYAC/Cmp\nYAC_Cmp\n\n\nPrss%\nPrssPct\n\n\nDrop%\nDropPct\n\n\nBad%\nBadPct\n\n\n\n\nAggregation: Each year’s CSV was appended into one combined dataset with a Season identifier.\n\nExtraction of playoff wins: The number of playoff games won by each QB was computed from the PFR QBrec column and stored in Playoff_Wins.\n\nHandling missing values: Missing entries—common for 2018 metrics not yet tracked and QBs with minimal postseason participation—were retained during wrangling, then dropped during modeling.\n\nFeature engineering: Added interceptions per pass attempt (IntPerAtt) as a derived column.\n\nMinimal transformations: Mostly aligning column names and ensuring numeric encoding.\n\nThe selected initial variables reflect domain knowledge about factors likely to impact playoff outcomes, providing a principled starting point for lasso-based selection.\n\n\n4. Methods / Analysis\nWe first explored ordinary least squares regression, but assumptions were violated (non-constant variance, skewed residuals). The response variable, playoff wins, is a non-negative count, making Poisson regression more appropriate.\nBecause the dataset contains many correlated predictors and the sample size is small (133 observations), we used lasso regularization to perform variable selection and avoid overfitting.\nModeling process:\n\nSelected initial predictors informed by football knowledge: IAY_PA, CAY_PA, YAC_Cmp, PrssPct, DropPct, BadPct\n\nStandardized predictors\n\nFitted lasso-penalized Poisson regression with cross-validation to choose the penalty parameter\n\nIdentified variables with non-zero coefficients in the final model\n\nThe lasso-optimized poisson model retained three primary predictors:\n\nIntended Air Yards per Completion (IAY_PA)\n\nYards After Catch per Completion (YAC_Cmp)\n\nInterceptions per Pass Attempt (IntPerAtt)\n\nThese results suggest that a combination of downfield efficiency, YAC-driven explosiveness, and turnover avoidance has the strongest relationship with playoff success.\n\n\n5. Results\nAfter lasso-based variable selection, a Poisson generalized linear model was fit using IAY_PA, YAC_Cmp, and IntPerAtt. The model was fit on 96 observations after removing missing rows.\nThe model explains a modest portion of playoff win variability (Cox–Snell pseudo-R² = 0.151). The residual deviance per degree of freedom was 1.24, indicating mild overdispersion.\nCoefficient table:\n\n\n\n\n\n\n\n\n\nPredictor\nCoefficient\np-value\nPercent Change in Expected Wins\n\n\n\n\nYards After Catch per Completion (YAC_Cmp)\n0.177\n0.046\n+19% per 1-yard increase\n\n\nInterceptions per Pass Attempt (IntPerAtt)\n-11.812\n0.042\n-11% per 0.01 increase\n\n\nIntended Air Yards per Completion (IAY_PA)\n-0.118\n0.096\n-11% per 1-yard increase\n\n\nIntercept\n0.159\n0.842\n—\n\n\n\nNotes: Percent change calculated as e^(coefficient) - 1 for 1-unit changes; for IntPerAtt, interpreted per 0.01 increase to match realistic scale. Positive values indicate an increase in expected playoff wins, negative values indicate a decrease.\nTo complement the statistical analysis, we developed a Streamlit application that provides an interactive interface for exploring the playoff quarterback dataset and visualizing model behavior. The app loads the cleaned postseason passing dataset (2018–2024), allows users to filter by season and team, and supports exploratory data analysis through summary statistics, correlation heatmaps, and distribution plots. The Streamlit application is organized into three primary functional components:\n-Data Loading and Preparation The app loads a cleaned dataset of NFL playoff quarterback passing statistics from 2018–2024. If the cleaned file is not available, the app automatically rebuilds it from the raw Pro Football Reference downloads using the project’s data-wrangling package. League-average rows are removed, and the dataset is cached to ensure consistent and efficient use across sessions.\n-Exploratory Data Analysis Interface Users can interactively explore the dataset through filters for season and team, tabular previews, downloadable CSV exports, descriptive statistics, and visualizations. These include distributions of playoff wins, scatter plots, correlation heatmaps, and model residual diagnostics. The app also provides exploratory k-means clustering and PCA visualizations to examine structural similarities among playoff quarterbacks, presented strictly as descriptive tools rather than inferential results.\n-Model Integration and Prediction The app integrates the final lasso-selected Poisson regression model used in the report. Users can input quarterback performance metrics—Intended Air Yards per Attempt (IAY_PA), Yards After Catch per Completion (YAC_Cmp), and Interceptions per Attempt (IntPerAtt)—to generate predicted expected playoff wins. Model summaries, diagnostics (pseudo-R², AIC, overdispersion), and interpretive notes are included to reinforce transparency and consistency with the statistical analysis.\nOverall, the Streamlit app functions as an interactive companion to the written analysis, supporting data exploration, model interpretability, and reproducibility rather than serving as a standalone predictive system.\n\n\n6. Discussion\nPercent-based interpretations reinforce that playoff QB success is driven less by aggressiveness and more by efficiency, ball security, and post-catch production. Even small increases in interception rate substantially reduce expected playoff wins, while additional YAC per completion significantly improves expected wins.\nThe negative association with IAY_PA suggests a tradeoff between vertical aggressiveness and consistency; deep passes may reduce expected playoff success due to higher variance, lower completion probability, or turnover risk.\nIt is important to note that many factors beyond QB performance influence playoff wins, including defense, coaching, and game context. The modest pseudo-R² reflects this reality.\nOverall, these findings indicate that in the postseason, maximizing efficiency and minimizing mistakes is more predictive of success than high-risk, high-reward strategies.\nAll data collection, wrangling, modeling, and visualization steps are fully reproducible using the provided Python package and scripts. The package handles raw data ingestion from Pro Football Reference HTML tables, feature engineering, and model fitting. The Streamlit app uses the same underlying codebase and fitted model parameters.\n\n\nReferences\n\nPro Football Reference, Advanced Passing Tables (2018–2024)\nPennsylvania State University. (n.d.). 12.3 – Poisson regression. STAT 462: Applied Regression Analysis. Retrieved December 17, 2025, from https://online.stat.psu.edu/stat462/node/209/"
+  },
+  {
+    "objectID": "analysis.html",
+    "href": "analysis.html",
+    "title": "Analysis Functions",
+    "section": "",
+    "text": "The nfl_playoff_predictor.analysis module provides functions for training, evaluating, and using Poisson GLM models to predict NFL playoff wins."
+  },
+  {
+    "objectID": "analysis.html#overview",
+    "href": "analysis.html#overview",
+    "title": "Analysis Functions",
+    "section": "",
+    "text": "The nfl_playoff_predictor.analysis module provides functions for training, evaluating, and using Poisson GLM models to predict NFL playoff wins."
+  },
+  {
+    "objectID": "analysis.html#functions",
+    "href": "analysis.html#functions",
+    "title": "Analysis Functions",
+    "section": "Functions",
+    "text": "Functions\n\nget_default_model()\nReturns the default trained model using the best variables from cross-validation.\nParameters: - df (pd.DataFrame): Dataframe with playoff passing statistics\nReturns: - statsmodels.genmod.generalized_linear_model.GLMResults: Fitted Poisson GLM model\nModel Configuration: - Variables: ['IAY_PA', 'YAC_Cmp', 'IntPerAtt'] (selected via 5-fold CV) - Model Type: Poisson Generalized Linear Model - IntPerAtt: Calculated as Int / Att\nExample:\nfrom nfl_playoff_predictor.analysis import get_default_model\nimport pandas as pd\n\ndf = pd.read_csv(\"clean_playoff_passing.csv\")\nmodel = get_default_model(df)\nprint(model.summary())\n\n\n\npredict_playoff_wins()\nPredicts playoff wins for given predictor values.\nParameters: - model: Fitted Poisson GLM model - predictors_dict (dict): Dictionary with predictor names and values - 'IAY_PA': Intended Air Yards per Attempt - 'YAC_Cmp': Yards After Catch per Completion - 'IntPerAtt': Interceptions per Attempt\nReturns: - float: Predicted number of playoff wins\nExample:\nfrom nfl_playoff_predictor.analysis import get_default_model, predict_playoff_wins\n\nmodel = get_default_model(df)\nprediction = predict_playoff_wins(model, {\n    'IAY_PA': 7.0,\n    'YAC_Cmp': 5.0,\n    'IntPerAtt': 0.02\n})\nprint(f\"Predicted wins: {prediction:.2f}\")\n\n\n\ntrain_poisson_model()\nTrains a Poisson GLM model with specified predictors.\nParameters: - df (pd.DataFrame): Prepared dataframe - predictors (list): List of predictor column names - response (str, default=“playoff_games_won”): Response variable name\nReturns: - statsmodels.genmod.generalized_linear_model.GLMResults: Fitted model\nExample:\nfrom nfl_playoff_predictor.analysis import train_poisson_model\n\nmodel = train_poisson_model(df, ['IAY_PA', 'YAC_Cmp', 'IntPerAtt'])\n\n\n\nevaluate_model()\nEvaluates model performance and diagnostics.\nParameters: - model: Fitted model - df (pd.DataFrame): Dataframe for evaluation - predictors (list): List of predictor column names - response (str, default=“playoff_games_won”): Response variable name\nReturns: - dict: Dictionary with evaluation metrics including: - overdispersion_ratio: Check for overdispersion - vif: Variance Inflation Factors - pseudo_r_squared: Pseudo R-squared value - aic, bic: Information criteria\nExample:\nfrom nfl_playoff_predictor.analysis import get_default_model, evaluate_model\n\nmodel = get_default_model(df)\nresults = evaluate_model(model, df, ['IAY_PA', 'YAC_Cmp', 'IntPerAtt'])\nprint(f\"Pseudo R²: {results['pseudo_r_squared']:.3f}\")\nprint(results['vif'])\n\n\n\nselect_variables_lasso()\nSelects variables using Poisson Lasso regression.\nParameters: - df (pd.DataFrame): Prepared dataframe - predictors (list): List of predictor column names - response (str, default=“playoff_games_won”): Response variable name - alpha (float, default=0.01): Final alpha value for selection - alphas (list, optional): List of alpha values to test\nReturns: - list: Selected variable names\n\n\n\ncross_validate_model()\nPerforms k-fold cross-validation for model selection.\nParameters: - df (pd.DataFrame): Prepared dataframe - predictors (list): List of predictor column names to test - response (str, default=“playoff_games_won”): Response variable name - n_splits (int, default=5): Number of folds - random_state (int, default=42): Random state for reproducibility\nReturns: - list: List of dictionaries with CV results, sorted by mean deviance\nExample:\nfrom nfl_playoff_predictor.analysis import cross_validate_model\n\npredictors = ['IAY_PA', 'YAC_Cmp', 'IntPerAtt', 'DropPct', 'BadPct']\ncv_results = cross_validate_model(df, predictors)\n\n# Print top 5 models\nfor i, result in enumerate(cv_results[:5], 1):\n    print(f\"Rank {i}: {result['predictors']}, Deviance: {result['mean_deviance']:.2f}\")"
+  },
+  {
+    "objectID": "analysis.html#model-details",
+    "href": "analysis.html#model-details",
+    "title": "Analysis Functions",
+    "section": "Model Details",
+    "text": "Model Details\n\nFinal Model\nThe default model uses three predictors selected via cross-validation:\n\nIAY_PA (Intended Air Yards per Attempt)\n\nMeasures how far downfield the quarterback is attempting to throw\nHigher values indicate more aggressive downfield passing\n\nYAC_Cmp (Yards After Catch per Completion)\n\nMeasures receiver production after the catch\nHigher values indicate better receiver play\n\nIntPerAtt (Interceptions per Attempt)\n\nCalculated as Int / Att\nLower values indicate better ball security\n\n\n\n\nModel Performance\n\nPseudo R²: ~0.15\nResidual Deviance / df: ~1.24\nOverdispersion: Within acceptable range for Poisson model\nVIF: All values &lt; 1.25 (no multicollinearity concerns)"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "NFL Playoff Predictor",
+    "section": "",
+    "text": "The NFL Playoff Predictor is a Python package for analyzing NFL playoff passing statistics and predicting postseason wins using advanced quarterback metrics. This package provides tools for data cleaning, statistical analysis, and predictive modeling."
+  },
+  {
+    "objectID": "index.html#about",
+    "href": "index.html#about",
+    "title": "NFL Playoff Predictor",
+    "section": "",
+    "text": "The NFL Playoff Predictor is a Python package for analyzing NFL playoff passing statistics and predicting postseason wins using advanced quarterback metrics. This package provides tools for data cleaning, statistical analysis, and predictive modeling."
+  },
+  {
+    "objectID": "index.html#quick-start",
+    "href": "index.html#quick-start",
+    "title": "NFL Playoff Predictor",
+    "section": "Quick Start",
+    "text": "Quick Start\n\nInstallation\npip install -r requirements.txt\npip install -e .\n\n\nBasic Usage\nfrom nfl_playoff_predictor.wrangling import process_and_save_dataset\nfrom nfl_playoff_predictor.analysis import get_default_model, predict_playoff_wins\n\n# Prepare the dataset\ndf = process_and_save_dataset(\"data sources\", \"clean_playoff_passing.csv\")\n\n# Get the trained model\nmodel = get_default_model(df)\n\n# Make a prediction\nprediction = predict_playoff_wins(model, {\n    'IAY_PA': 7.0,\n    'YAC_Cmp': 5.0,\n    'IntPerAtt': 0.02\n})\nprint(f\"Predicted playoff wins: {prediction:.2f}\")"
+  },
+  {
+    "objectID": "index.html#package-structure",
+    "href": "index.html#package-structure",
+    "title": "NFL Playoff Predictor",
+    "section": "Package Structure",
+    "text": "Package Structure\nnfl_playoff_predictor/\n├── wrangling/          # Data cleaning and preparation\n│   └── data_cleaning.py\n└── analysis/            # Statistical analysis and modeling\n    └── modeling.py"
+  },
+  {
+    "objectID": "index.html#features",
+    "href": "index.html#features",
+    "title": "NFL Playoff Predictor",
+    "section": "Features",
+    "text": "Features\n\nData Wrangling: Clean and prepare NFL playoff passing statistics from multiple seasons\nPredictive Modeling: Poisson GLM model for predicting playoff wins\nInteractive App: Streamlit web application for exploration and predictions\nComprehensive Documentation: Full function documentation and tutorials"
+  },
+  {
+    "objectID": "index.html#documentation",
+    "href": "index.html#documentation",
+    "title": "NFL Playoff Predictor",
+    "section": "Documentation",
+    "text": "Documentation\n\nData Wrangling Functions - Functions for cleaning and preparing data\nAnalysis Functions - Modeling and prediction functions\nTutorial - Step-by-step guide to using the package\nFinal Report - Complete project report"
+  },
+  {
+    "objectID": "index.html#authors",
+    "href": "index.html#authors",
+    "title": "NFL Playoff Predictor",
+    "section": "Authors",
+    "text": "Authors\nEli Spiller and Zion Tippetts\nSTAT 386 Final Project - Fall 2025"
+  },
+  {
+    "objectID": "index.html#links",
+    "href": "index.html#links",
+    "title": "NFL Playoff Predictor",
+    "section": "Links",
+    "text": "Links\n\nGitHub Repository\nGitHub Pages Documentation\nStreamlit App (to be deployed - update with actual URL once deployed)"
+  },
+  {
+    "objectID": "tutorial.html",
+    "href": "tutorial.html",
+    "title": "Tutorial",
+    "section": "",
+    "text": "This tutorial walks you through a complete analysis workflow using the NFL Playoff Predictor package."
+  },
+  {
+    "objectID": "tutorial.html#complete-workflow-tutorial",
+    "href": "tutorial.html#complete-workflow-tutorial",
+    "title": "Tutorial",
+    "section": "",
+    "text": "This tutorial walks you through a complete analysis workflow using the NFL Playoff Predictor package."
+  },
+  {
+    "objectID": "tutorial.html#step-1-install-and-import",
+    "href": "tutorial.html#step-1-install-and-import",
+    "title": "Tutorial",
+    "section": "Step 1: Install and Import",
+    "text": "Step 1: Install and Import\nFirst, install the package and import necessary modules:\n# Install the package (if not already installed)\n# pip install -e .\n\n# Import required modules\nimport pandas as pd\nfrom nfl_playoff_predictor.wrangling import process_and_save_dataset\nfrom nfl_playoff_predictor.analysis import (\n    get_default_model,\n    predict_playoff_wins,\n    evaluate_model\n)"
+  },
+  {
+    "objectID": "tutorial.html#step-2-prepare-your-data",
+    "href": "tutorial.html#step-2-prepare-your-data",
+    "title": "Tutorial",
+    "section": "Step 2: Prepare Your Data",
+    "text": "Step 2: Prepare Your Data\n\nData File Requirements\nBefore running the data processing functions, you need to download NFL playoff passing statistics from Pro-Football-Reference.\nFile Naming Format: - Files must be named exactly: {YEAR}_Playoffs_Advanced.xls and {YEAR}_Standard_Passing.xls - Example: 2018_Playoffs_Advanced.xls, 2018_Standard_Passing.xls - The files should be HTML tables saved with .xls extension (Pro-Football-Reference exports)\nDirectory Structure: - Create a directory called data sources/ (or any name you prefer) - Place all data files in this directory - The directory can be in the same location as your Python script or package\nExample directory structure:\nyour-project/\n├── data sources/\n│   ├── 2018_Playoffs_Advanced.xls\n│   ├── 2018_Standard_Passing.xls\n│   ├── 2019_Playoffs_Advanced.xls\n│   ├── 2019_Standard_Passing.xls\n│   └── ... (one pair for each year)\n├── nfl_playoff_predictor/\n└── streamlit_app.py\n\n\nProcessing the Data\nOnce your data files are properly named and in the correct directory:\n# Process and save the dataset\ndf = process_and_save_dataset(\n    data_dir=\"data sources\",  # Path to directory containing data files\n    output_file=\"clean_playoff_passing.csv\",\n    start_year=2018,\n    end_year=2024\n)\n\nprint(f\"Dataset shape: {df.shape}\")\nprint(f\"Columns: {df.columns.tolist()}\")\nNote: The function will automatically: - Find files matching the naming pattern for each year - Skip years where files are missing (with a warning message) - Filter out “League Average” rows - Merge advanced and standard passing statistics - Extract playoff wins from the QBrec field\n\n\nUsing Pre-cleaned Data\nAlternatively, if you already have a cleaned CSV file:\ndf = pd.read_csv(\"clean_playoff_passing.csv\")"
+  },
+  {
+    "objectID": "tutorial.html#step-3-explore-the-data",
+    "href": "tutorial.html#step-3-explore-the-data",
+    "title": "Tutorial",
+    "section": "Step 3: Explore the Data",
+    "text": "Step 3: Explore the Data\n# Basic information\nprint(df.info())\nprint(df.describe())\n\n# Check for missing values\nprint(df.isnull().sum())\n\n# View the first few rows\nprint(df.head())"
+  },
+  {
+    "objectID": "tutorial.html#step-4-train-the-model",
+    "href": "tutorial.html#step-4-train-the-model",
+    "title": "Tutorial",
+    "section": "Step 4: Train the Model",
+    "text": "Step 4: Train the Model\nGet the default trained model (uses best variables from cross-validation):\n# Train the model\nmodel = get_default_model(df)\n\n# View model summary\nprint(model.summary())\nThe model uses three predictors: - IAY_PA: Intended Air Yards per Attempt - YAC_Cmp: Yards After Catch per Completion\n- IntPerAtt: Interceptions per Attempt (calculated as Int / Att)"
+  },
+  {
+    "objectID": "tutorial.html#step-5-make-predictions",
+    "href": "tutorial.html#step-5-make-predictions",
+    "title": "Tutorial",
+    "section": "Step 5: Make Predictions",
+    "text": "Step 5: Make Predictions\nPredict playoff wins for a quarterback:\n# Example: Predict for a quarterback with:\n# - IAY/PA = 7.0\n# - YAC/Cmp = 5.0\n# - Int = 2, Att = 100 (so IntPerAtt = 0.02)\n\nprediction = predict_playoff_wins(model, {\n    'IAY_PA': 7.0,\n    'YAC_Cmp': 5.0,\n    'IntPerAtt': 2 / 100  # 0.02\n})\n\nprint(f\"Predicted playoff wins: {prediction:.2f}\")"
+  },
+  {
+    "objectID": "tutorial.html#step-6-evaluate-model-performance",
+    "href": "tutorial.html#step-6-evaluate-model-performance",
+    "title": "Tutorial",
+    "section": "Step 6: Evaluate Model Performance",
+    "text": "Step 6: Evaluate Model Performance\n# Evaluate the model\nselected_vars = ['IAY_PA', 'YAC_Cmp', 'IntPerAtt']\nresults = evaluate_model(model, df, selected_vars)\n\n# View metrics\nprint(f\"Pseudo R²: {results['pseudo_r_squared']:.3f}\")\nprint(f\"AIC: {results['aic']:.2f}\")\nprint(f\"Overdispersion ratio: {results['overdispersion_ratio']:.2f}\")\n\n# Check VIF values\nprint(\"\\nVariance Inflation Factors:\")\nprint(results['vif'])"
+  },
+  {
+    "objectID": "tutorial.html#step-7-use-the-streamlit-app",
+    "href": "tutorial.html#step-7-use-the-streamlit-app",
+    "title": "Tutorial",
+    "section": "Step 7: Use the Streamlit App",
+    "text": "Step 7: Use the Streamlit App\nFor an interactive experience, run the Streamlit app:\nstreamlit run streamlit_app.py\nThe app provides: - Data Explorer: Interactive data exploration with filters and visualizations - Predictions: Make predictions using the trained model - Model Diagnostics: View model performance metrics"
+  },
+  {
+    "objectID": "tutorial.html#complete-example",
+    "href": "tutorial.html#complete-example",
+    "title": "Tutorial",
+    "section": "Complete Example",
+    "text": "Complete Example\nHere’s a complete example combining all steps:\nimport pandas as pd\nfrom nfl_playoff_predictor.wrangling import process_and_save_dataset\nfrom nfl_playoff_predictor.analysis import get_default_model, predict_playoff_wins\n\n# 1. Prepare data\ndf = process_and_save_dataset(\"data sources\", \"clean_playoff_passing.csv\")\n\n# 2. Train model\nmodel = get_default_model(df)\n\n# 3. Make a prediction\nprediction = predict_playoff_wins(model, {\n    'IAY_PA': 7.5,\n    'YAC_Cmp': 5.2,\n    'IntPerAtt': 0.015\n})\n\nprint(f\"Predicted playoff wins: {prediction:.2f}\")"
+  },
+  {
+    "objectID": "tutorial.html#tips-and-best-practices",
+    "href": "tutorial.html#tips-and-best-practices",
+    "title": "Tutorial",
+    "section": "Tips and Best Practices",
+    "text": "Tips and Best Practices\n\nData Quality: Ensure your data files are properly formatted and named correctly\nMissing Values: The functions handle missing values by dropping rows with any missing predictors\nModel Interpretation: Remember that predictions are expected values (means) from a Poisson distribution\nFeature Engineering: The package automatically calculates IntPerAtt from Int and Att"
+  },
+  {
+    "objectID": "tutorial.html#troubleshooting",
+    "href": "tutorial.html#troubleshooting",
+    "title": "Tutorial",
+    "section": "Troubleshooting",
+    "text": "Troubleshooting\nIssue: No files found for year X - Solution: - Ensure files are named exactly: {YEAR}_Playoffs_Advanced.xls and {YEAR}_Standard_Passing.xls - Check that files are in the correct directory (specified by data_dir parameter) - Verify file extensions are .xls (even though they’re HTML tables) - Make sure the year in the filename matches the year range you’re processing\nIssue: Model training fails - Solution: Ensure your dataframe has the required columns: Int, Att, IAY/PA, YAC/Cmp\nIssue: Prediction returns unexpected values - Solution: Check that input values are within reasonable ranges (e.g., IntPerAtt should be between 0 and ~0.1)\nIssue: Import errors - Solution: Make sure you’ve installed the package: pip install -e .\nIssue: Files not found error - Solution: - Verify the data_dir path is correct (relative to your current working directory) - Check that the directory exists and contains the data files - On Windows, use forward slashes or raw strings: r\"data sources\" or \"data sources/\""
+  }
+]
