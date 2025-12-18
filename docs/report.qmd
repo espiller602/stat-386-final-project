@@ -2,7 +2,7 @@
 title: "Modeling NFL Playoff Success Using Advanced Quarterback Statistics"
 author: 
   - "Eli Spiller"
-  - "Zion Tippets"
+  - "Zion Tippetts"
 date: "December 15, 2025"
 format: html
 editor: visual
