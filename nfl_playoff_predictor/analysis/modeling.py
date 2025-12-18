@@ -179,16 +179,11 @@ def predict_playoff_wins(model, predictors_dict):
     float
         Predicted number of playoff wins
     """
-    # Create dataframe with single row
     pred_df = pd.DataFrame([predictors_dict])
-    
-    # Make prediction
-    prediction = model.predict(pred_df)
-    # Print the prediction
-    print(f"Predicted playoff wins: {predicted_value:.2f}")
-    
-    return float(prediction.iloc[0])
 
+    prediction = model.predict(pred_df)
+
+    return float(prediction.iloc[0])
 
 def evaluate_model(model, df, predictors, response="playoff_games_won"):
     """
